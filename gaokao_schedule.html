@@ -393,9 +393,29 @@
         }
 
         .exam-card.exam-done {
-            opacity: 0.5;
+            opacity: 0.55;
         }
-        .exam-card.exam-done .countdown-mini .cd-num { color: #28a745; }
+        .exam-card.exam-done .countdown-mini .cd-num,
+        .exam-card.exam-done .countdown-mini .cd-unit,
+        .exam-card.exam-done .countdown-mini .cd-sep {
+            display: none;
+        }
+        .exam-done-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            font-size: 0.65rem;
+            color: #28a745;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+        .exam-done-badge::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #28a745;
+        }
 
         .exam-card.exam-now {
             border-color: #dc3545;
@@ -476,7 +496,6 @@
             transition: all 0.25s;
         }
         .fs-toggle:hover { background: #c82333; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(220,53,69,0.4); }
-        .fs-toggle-icon { font-size: 1.1rem; }
 
         /* ===== 全屏覆盖层 ===== */
         .fs-overlay {
@@ -692,15 +711,6 @@
             color: #dc3545;
             font-weight: 700;
         }
-            font-size: 0.8rem;
-            color: #bbb;
-            letter-spacing: 1px;
-        }
-        .fs-summary strong {
-            font-size: 1rem;
-            color: #dc3545;
-            font-weight: 700;
-        }
 
         .exam-card {
             opacity: 0;
@@ -805,7 +815,7 @@
     <div class="footer">金榜题名 · 前程似锦</div>
 
     <!-- 全屏模式切换 -->
-    <button class="fs-toggle" id="fsToggle" title="全屏显示"><span class="fs-toggle-icon">⛶</span> 全屏</button>
+    <button class="fs-toggle" id="fsToggle" title="全屏显示">全屏</button>
 
     <!-- ===== 全屏显示覆盖层 ===== -->
     <div class="fs-overlay" id="fsOverlay">
@@ -983,7 +993,7 @@
         // 提示标签
         const hint = document.createElement('div');
         hint.className = 'cd-legend';
-        hint.textContent = '距离每场考试还有';
+        hint.textContent = '距开考倒计时';
         root.appendChild(hint);
     }
 
@@ -1043,6 +1053,8 @@
 
             // 清除状态
             card.classList.remove('exam-now', 'exam-done');
+            const oldBadge = card.querySelector('.exam-done-badge');
+            if (oldBadge) oldBadge.remove();
 
             if (now < start) {
                 // 尚未开始 → 倒计时
@@ -1078,11 +1090,19 @@
             } else {
                 // 已结束
                 card.classList.add('exam-done');
-                dEl.textContent = '—';
+                dEl.textContent = '';
                 hEl.textContent = '';
                 mEl.textContent = '';
                 sEl.textContent = '';
-                // 清除 badge
+                // 显示"已完成"徽章
+                let doneBadge = card.querySelector('.exam-done-badge');
+                if (!doneBadge) {
+                    doneBadge = document.createElement('span');
+                    doneBadge.className = 'exam-done-badge';
+                    doneBadge.textContent = '已完成';
+                    card.querySelector('.countdown-mini').appendChild(doneBadge);
+                }
+                // 清除"考试中" badge
                 const badge = card.querySelector('.exam-badge');
                 if (badge) badge.remove();
             }
@@ -1239,8 +1259,8 @@
             fsDm.textContent = pad2(m);
             fsDs.textContent = pad2(s);
         } else {
-            fsDd.textContent = '✓'; fsDh.textContent = '✓';
-            fsDm.textContent = '✓'; fsDs.textContent = '✓';
+            fsDd.textContent = '—'; fsDh.textContent = '—';
+            fsDm.textContent = '—'; fsDs.textContent = '—';
         }
 
         // 下一场
