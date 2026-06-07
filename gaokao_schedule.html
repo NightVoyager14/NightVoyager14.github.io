@@ -60,7 +60,7 @@
         .hero-countdown {
             background: #fff;
             border-radius: 16px;
-            padding: 20px 20px;
+            padding: 20px;
             margin-bottom: 20px;
             text-align: center;
             box-shadow: 0 2px 12px rgba(220,53,69,0.06);
@@ -140,6 +140,11 @@
             box-shadow: 0 2px 12px rgba(220,53,69,0.06);
             border: 1px solid rgba(220,53,69,0.08);
             animation: fadeUp 0.4s ease;
+            transition: border-color 0.3s;
+        }
+        .current-exam.ce-waiting {
+            border-color: #e6a800;
+            box-shadow: 0 2px 12px rgba(230,168,0,0.06);
         }
         .current-exam.show { display: block; }
 
@@ -544,10 +549,44 @@
             font-size: 0.9rem;
             color: #999;
             letter-spacing: 4px;
-            margin-bottom: 2vh;
+            margin-bottom: 1.2vh;
             font-weight: 500;
             flex-shrink: 0;
         }
+
+        /* -- 状态条 -- */
+        .fs-status-bar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 2vh;
+            flex-shrink: 0;
+        }
+        .fs-status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #dc3545;
+            animation: pulseDot 1.2s ease-in-out infinite;
+        }
+        .fs-status-text {
+            font-size: 0.8rem;
+            letter-spacing: 3px;
+            font-weight: 500;
+        }
+        .fs-status-bar.status-waiting .fs-status-dot {
+            background: #e6a800;
+            animation: none;
+        }
+        .fs-status-bar.status-waiting .fs-status-text { color: #e6a800; }
+        .fs-status-bar.status-ongoing .fs-status-dot { background: #dc3545; }
+        .fs-status-bar.status-ongoing .fs-status-text { color: #dc3545; }
+        .fs-status-bar.status-done .fs-status-dot {
+            background: #28a745;
+            animation: none;
+        }
+        .fs-status-bar.status-done .fs-status-text { color: #28a745; }
 
         /* -- 主体区域（flex 撑满） -- */
         .fs-main {
@@ -582,6 +621,14 @@
             letter-spacing: 3px;
             margin-bottom: 2vh;
         }
+
+        /* -- 等待考试时的配色 -- */
+        .fs-state-waiting .fs-current-name { color: #e6a800; }
+        .fs-state-waiting .fs-timer-digits .digit-block .num { color: #e6a800; }
+        .fs-state-waiting .fs-progress-fill {
+            background: linear-gradient(90deg, #f5af19, #e6a800);
+        }
+        .fs-state-waiting .fs-next-countdown { color: #dc3545; }
 
         /* -- 计时器数字块（填充横向空间） -- */
         .fs-timer-wrap {
@@ -822,6 +869,11 @@
         <button class="fs-exit" id="fsExit" title="退出全屏">✕ 退出</button>
         <div class="fs-inner">
             <div class="fs-header">四川高考倒计时 · 3+1+2</div>
+
+            <div class="fs-status-bar" id="fsStatusBar">
+                <span class="fs-status-dot" id="fsStatusDot"></span>
+                <span class="fs-status-text" id="fsStatusText">正在进行</span>
+            </div>
 
             <div class="fs-main">
                 <div class="fs-current-label" id="fsCurLabel">当前考试</div>
@@ -1138,6 +1190,7 @@
             const remain = e - now;
             const pct = Math.min(100, Math.max(0, (elapsed / total) * 100));
 
+            ceEl.classList.remove('ce-waiting');
             ceEl.classList.add('show');
             const sh = pad2(current.start[0]), sm = pad2(current.start[1]);
             const eh = pad2(current.end[0]), em = pad2(current.end[1]);
@@ -1176,6 +1229,7 @@
             ceFill.style.width = '0%';
             ceStart.textContent = '距离开考';
             ceEnd.textContent = ceCountdown.textContent;
+            ceEl.classList.add('ce-waiting');
         } else if (lastDone) {
             // 全部结束
             ceEl.classList.add('show');
@@ -1188,8 +1242,9 @@
             ceFill.style.width = '100%';
             ceStart.textContent = '全部完成';
             ceEnd.textContent = '金榜题名';
+            ceEl.classList.remove('ce-waiting');
         } else {
-            ceEl.classList.remove('show');
+            ceEl.classList.remove('show', 'ce-waiting');
         }
     }
 
@@ -1219,6 +1274,35 @@
 
     function updateFullscreen() {
         const now = new Date();
+        const fsInner = document.querySelector('.fs-inner');
+
+        // 判断当前是否有考试在进行
+        let hasCurrent = false, curExam = null;
+        for (const ex of exams) {
+            const s = getExamStart(ex), e = getExamEnd(ex);
+            if (now >= s && now <= e) { hasCurrent = true; curExam = ex; break; }
+        }
+
+        const allDone = exams.every(ex => now > getExamEnd(ex));
+
+        // 切换等待/进行中状态样式（全部结束时保持默认）
+        fsInner.classList.toggle('fs-state-waiting', !hasCurrent && !allDone);
+
+        // 状态条
+        const fsStatusBar = document.getElementById('fsStatusBar');
+        const fsStatusText = document.getElementById('fsStatusText');
+        fsStatusBar.className = 'fs-status-bar';
+        if (hasCurrent) {
+            fsStatusBar.classList.add('status-ongoing');
+            fsStatusText.textContent = '正在进行';
+        } else if (allDone) {
+            fsStatusBar.classList.add('status-done');
+            fsStatusText.textContent = '已全部完成';
+        } else {
+            fsStatusBar.classList.add('status-waiting');
+            fsStatusText.textContent = '等待开考';
+        }
+
         const ceEl = document.getElementById('currentExam');
         const isVisible = ceEl.classList.contains('show');
 
@@ -1234,7 +1318,7 @@
         document.getElementById('fsProgEnd').textContent  = progEnd;
 
         document.getElementById('fsCurLabel').textContent =
-            isVisible ? '当前考试' : '下一场考试';
+            hasCurrent ? '当前考试' : (isVisible ? '下一场' : '高考进程');
 
         // 更新数字块计时器
         const fsDd = document.getElementById('fsDd');
@@ -1284,7 +1368,6 @@
             }
         }
 
-        const allDone = exams.every(ex => now > getExamEnd(ex));
         if (allDone) {
             document.getElementById('fsNext').style.display = 'none';
         } else {
