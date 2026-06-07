@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>四川高考时间表 · 3+1+2</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+                "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #fef6f0 0%, #fff5ee 50%, #fef0e8 100%);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 30px 16px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+        }
+
+        /* ===== 头部 ===== */
+        .header {
+            text-align: center;
+            margin-bottom: 28px;
+        }
+
+        .header h1 {
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: #dc3545;
+            letter-spacing: 3px;
+        }
+
+        .header .sub {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-top: 6px;
+            color: #888;
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+        }
+
+        .header .sub .badge {
+            background: #dc3545;
+            padding: 2px 14px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            color: #fff;
+            font-weight: 600;
+        }
+
+        /* ===== 总体倒计时 ===== */
+        .hero-countdown {
+            background: #fff;
+            border-radius: 16px;
+            padding: 20px 20px;
+            margin-bottom: 20px;
+            text-align: center;
+            box-shadow: 0 2px 12px rgba(220,53,69,0.06);
+            border: 1px solid rgba(220,53,69,0.08);
+        }
+
+        .hero-countdown .label {
+            color: #666;
+            font-size: 0.8rem;
+            letter-spacing: 2px;
+            margin-bottom: 12px;
+            font-weight: 500;
+        }
+
+        .hero-countdown .timer {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .hero-countdown .timer .num {
+            font-size: 2.4rem;
+            font-weight: 800;
+            color: #dc3545;
+            background: #fef6f0;
+            border-radius: 10px;
+            padding: 4px 12px;
+            min-width: 56px;
+            text-align: center;
+            font-variant-numeric: tabular-nums;
+            line-height: 1.3;
+        }
+
+        .hero-countdown .timer .sep {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #ddd;
+            padding-bottom: 4px;
+        }
+
+        .hero-countdown .timer .unit {
+            font-size: 0.65rem;
+            color: #999;
+            display: block;
+            margin-top: 2px;
+        }
+
+        .hero-countdown.ongoing .timer .num {
+            background: #fff0f0;
+            animation: pulseSoft 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulseSoft {
+            0%,100% { box-shadow: 0 0 8px rgba(220,53,69,0.08); }
+            50% { box-shadow: 0 0 20px rgba(220,53,69,0.18); }
+        }
+
+        .status-msg {
+            color: #dc3545;
+            font-size: 0.95rem;
+            font-weight: 600;
+            letter-spacing: 2px;
+            display: none;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+        .status-msg.show { display: block; animation: fadeUp 0.4s ease; }
+
+        /* ===== 当前考试进程 ===== */
+        .current-exam {
+            background: #fff;
+            border-radius: 16px;
+            padding: 18px 22px;
+            margin-bottom: 20px;
+            display: none;
+            box-shadow: 0 2px 12px rgba(220,53,69,0.06);
+            border: 1px solid rgba(220,53,69,0.08);
+            animation: fadeUp 0.4s ease;
+        }
+        .current-exam.show { display: block; }
+
+        .current-exam .ce-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .current-exam .ce-header .ce-label {
+            color: #888;
+            font-size: 0.72rem;
+            letter-spacing: 2px;
+            font-weight: 500;
+        }
+
+        .current-exam .ce-header .ce-status-badge {
+            font-size: 0.65rem;
+            padding: 2px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+        .ce-status-badge.ce-ongoing {
+            background: #fff0f0;
+            color: #dc3545;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .ce-status-badge.ce-ongoing::before {
+            content: '';
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: #dc3545;
+            animation: pulseDot 1.2s ease-in-out infinite;
+        }
+        .ce-status-badge.ce-upcoming {
+            background: #fff8e8;
+            color: #e6a800;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .ce-status-badge.ce-upcoming::before {
+            content: '';
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: #e6a800;
+        }
+        .ce-status-badge.ce-done {
+            background: #f0faf0;
+            color: #28a745;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .ce-status-badge.ce-done::before {
+            content: '';
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: #28a745;
+        }
+
+        .current-exam .ce-body {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .current-exam .ce-body .ce-name {
+            color: #222;
+            font-size: 1.2rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+
+        .current-exam .ce-body .ce-time {
+            color: #999;
+            font-size: 0.8rem;
+        }
+
+        .current-exam .ce-body .ce-countdown-num {
+            color: #dc3545;
+            font-size: 1.3rem;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .ce-progress-wrap { width: 100%; margin-top: 12px; }
+        .ce-progress-bar {
+            width: 100%; height: 4px;
+            background: #f0f0f0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .ce-progress-bar .ce-progress-fill {
+            height: 100%; border-radius: 4px;
+            background: linear-gradient(90deg, #dc3545, #ff6b6b);
+            transition: width 0.5s ease;
+            width: 0%;
+        }
+        .ce-progress-wrap .ce-progress-label {
+            display: flex;
+            justify-content: space-between;
+            color: #bbb;
+            font-size: 0.6rem;
+            margin-top: 4px;
+        }
+
+        /* ===== 日程标题 ===== */
+        .section-title {
+            color: #888;
+            font-size: 0.85rem;
+            font-weight: 600;
+            letter-spacing: 2px;
+            margin-bottom: 14px;
+            text-align: center;
+        }
+
+        /* ===== 日期组 ===== */
+        .day-group { margin-bottom: 18px; }
+
+        .day-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .day-header .day-num {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #dc3545;
+            background: #fef0e8;
+            padding: 2px 10px;
+            border-radius: 6px;
+        }
+
+        .day-header .day-date {
+            color: #aaa;
+            font-size: 0.8rem;
+            letter-spacing: 1px;
+        }
+
+        /* ===== 上下午分隔 ===== */
+        .session-divider {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 10px 0 6px;
+            padding-left: 2px;
+        }
+        .session-divider .line {
+            flex: 1;
+            height: 1px;
+            background: #eee;
+        }
+        .session-divider .label {
+            font-size: 0.7rem;
+            color: #bbb;
+            letter-spacing: 2px;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        /* ===== 考试卡片 ===== */
+        .exam-card {
+            background: #fff;
+            border: 1px solid #eee;
+            border-radius: 12px;
+            padding: 12px 16px;
+            margin-bottom: 6px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 6px 12px;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.02);
+        }
+
+        .exam-card:hover {
+            border-color: #f0c0c0;
+            box-shadow: 0 2px 8px rgba(220,53,69,0.06);
+        }
+
+        .exam-card .name {
+            color: #222;
+            font-size: 0.95rem;
+            font-weight: 600;
+            min-width: 68px;
+            letter-spacing: 1px;
+        }
+
+        .exam-card .meta {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            flex: 1;
+        }
+
+        .exam-card .meta .time-range {
+            color: #888;
+            font-size: 0.78rem;
+            font-weight: 500;
+        }
+
+        .exam-card .meta .tag {
+            font-size: 0.62rem;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-weight: 500;
+        }
+        .tag-mandatory { background: #fff0f0; color: #dc3545; }
+        .tag-elective { background: #f0f5ff; color: #4a8fe0; }
+        .tag-special { background: #fff5f0; color: #e07050; }
+
+        .exam-card .countdown-mini {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            margin-left: auto;
+            flex-shrink: 0;
+        }
+
+        .exam-card .countdown-mini .cd-num {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #555;
+            font-variant-numeric: tabular-nums;
+            min-width: 18px;
+            text-align: center;
+        }
+
+        .exam-card .countdown-mini .cd-unit {
+            font-size: 0.6rem;
+            color: #bbb;
+        }
+
+        .exam-card .countdown-mini .cd-sep {
+            color: #ddd;
+            font-weight: 700;
+        }
+
+        .exam-card.exam-done {
+            opacity: 0.5;
+        }
+        .exam-card.exam-done .countdown-mini .cd-num { color: #28a745; }
+
+        .exam-card.exam-now {
+            border-color: #dc3545;
+            background: #fff8f8;
+        }
+        .exam-card.exam-now .countdown-mini .cd-num { color: #dc3545; }
+        .exam-card.exam-now .name { color: #dc3545; }
+
+        .exam-card.exam-now .exam-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            font-size: 0.6rem;
+            padding: 1px 10px;
+            border-radius: 20px;
+            background: #fff0f0;
+            color: #dc3545;
+            margin-left: 6px;
+            font-weight: 600;
+        }
+        .exam-card.exam-now .exam-badge::before {
+            content: '';
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: #dc3545;
+            animation: pulseDot 1.2s ease-in-out infinite;
+        }
+        @keyframes pulseDot {
+            0%,100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .cd-legend {
+            text-align: center;
+            color: #ccc;
+            font-size: 0.6rem;
+            letter-spacing: 1px;
+            margin-bottom: 14px;
+        }
+
+        .footer {
+            text-align: center;
+            color: #dc3545;
+            font-size: 0.85rem;
+            padding: 18px 0 6px;
+            border-top: 1px solid #f0e0e0;
+            letter-spacing: 2px;
+            font-weight: 500;
+        }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .container { animation: fadeUp 0.4s ease; }
+
+        .exam-card {
+            opacity: 0;
+            animation: fadeUp 0.3s ease forwards;
+        }
+        .exam-card:nth-child(1) { animation-delay: 0.02s; }
+        .exam-card:nth-child(2) { animation-delay: 0.04s; }
+        .exam-card:nth-child(3) { animation-delay: 0.06s; }
+        .exam-card:nth-child(4) { animation-delay: 0.08s; }
+        .exam-card:nth-child(5) { animation-delay: 0.10s; }
+        .exam-card:nth-child(6) { animation-delay: 0.12s; }
+        .exam-card:nth-child(7) { animation-delay: 0.14s; }
+        .exam-card:nth-child(8) { animation-delay: 0.16s; }
+        .exam-card:nth-child(9) { animation-delay: 0.18s; }
+        .exam-card:nth-child(10) { animation-delay: 0.20s; }
+
+        @media (max-width: 600px) {
+            body { padding: 16px 10px; }
+            .header h1 { font-size: 1.6rem; letter-spacing: 2px; }
+            .hero-countdown { padding: 16px 14px; }
+            .hero-countdown .timer .num { font-size: 1.6rem; min-width: 42px; padding: 3px 8px; }
+            .hero-countdown .timer .sep { font-size: 1.4rem; }
+            .current-exam { padding: 14px 16px; }
+            .current-exam .ce-body .ce-name { font-size: 1rem; }
+            .current-exam .ce-body .ce-countdown-num { font-size: 1.1rem; }
+            .exam-card { padding: 10px 12px; gap: 4px; }
+            .exam-card .name { font-size: 0.88rem; min-width: 52px; }
+            .exam-card .countdown-mini { margin-left: 0; width: 100%; justify-content: flex-end; }
+            .exam-card .meta .time-range { font-size: 0.72rem; }
+            .session-divider { margin: 8px 0 4px; }
+            .session-divider .label { font-size: 0.65rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- 头部 -->
+    <div class="header">
+        <h1>高考倒计时</h1>
+        <div class="sub">
+            <span>四川 · 3+1+2 新高考</span>
+            <span class="badge" id="yearBadge">2026</span>
+        </div>
+    </div>
+
+    <!-- 状态横幅 -->
+    <div class="status-msg" id="statusMsg">高考进行中 · 沉着冷静</div>
+
+    <!-- 总体倒计时 -->
+    <div class="hero-countdown" id="heroSection">
+        <div class="label" id="heroLabel">距高考还有</div>
+        <div class="timer" id="heroTimer">
+            <div><span class="num" id="hDays">--</span><span class="unit">天</span></div>
+            <span class="sep">:</span>
+            <div><span class="num" id="hHours">--</span><span class="unit">时</span></div>
+            <span class="sep">:</span>
+            <div><span class="num" id="hMins">--</span><span class="unit">分</span></div>
+            <span class="sep">:</span>
+            <div><span class="num" id="hSecs">--</span><span class="unit">秒</span></div>
+        </div>
+    </div>
+
+    <!-- 当前考试进程 -->
+    <div class="current-exam" id="currentExam">
+        <div class="ce-header">
+            <span class="ce-label" id="ceLabel">当前考试</span>
+            <span class="ce-status-badge ce-ongoing" id="ceBadge">进行中</span>
+        </div>
+        <div class="ce-body">
+            <span class="ce-name" id="ceName">—</span>
+            <span class="ce-time" id="ceTime">—</span>
+            <span class="ce-countdown-num" id="ceCountdown">--:--:--</span>
+        </div>
+        <div class="ce-progress-wrap">
+            <div class="ce-progress-bar">
+                <div class="ce-progress-fill" id="ceProgressFill"></div>
+            </div>
+            <div class="ce-progress-label">
+                <span id="ceProgressStart">开始</span>
+                <span id="ceProgressEnd">结束</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 日程标题 -->
+    <div class="section-title">考试日程</div>
+
+    <!-- 日程容器 -->
+    <div id="scheduleRoot"></div>
+
+    <!-- 底部 -->
+    <div class="footer">金榜题名 · 前程似锦</div>
+</div>
+
+<script>
+    // ============================================================
+    //  四川 3+1+2 新高考 · 考试数据
+    // ============================================================
+
+    const GAOKAO_YEAR = (() => {
+        const now = new Date();
+        const y = now.getFullYear();
+        const end = new Date(y, 5, 10, 11, 0, 0);
+        return now > end ? y + 1 : y;
+    })();
+
+    // 考试配置
+    const exams = [
+        // 6月7日
+        { date: 7, start: [9,0],  end: [11,30], name: '语文',         tag: 'mandatory' },
+        { date: 7, start: [15,0], end: [17,0],  name: '数学',         tag: 'mandatory' },
+        // 6月8日
+        { date: 8, start: [9,0],  end: [10,15], name: '历史 / 物理',  tag: 'elective' },
+        { date: 8, start: [15,0], end: [17,0],  name: '外语',         tag: 'mandatory' },
+        // 6月9日
+        { date: 9, start: [8,30], end: [9,45],  name: '化学',         tag: 'elective' },
+        { date: 9, start: [11,0], end: [12,15], name: '地理',         tag: 'elective' },
+        { date: 9, start: [14,30],end: [15,45], name: '思想政治',     tag: 'elective' },
+        { date: 9, start: [17,0], end: [18,15], name: '生物学',       tag: 'elective' },
+        // 6月10日
+        { date: 10, start: [9,0], end: [11,0],  name: '藏语文 / 彝语文', tag: 'special' },
+    ];
+
+    const tagLabels = { mandatory: '全国统考', elective: '等级选考', special: '民族加试' };
+    const tagClasses = { mandatory: 'tag-mandatory', elective: 'tag-elective', special: 'tag-special' };
+    const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
+
+    function getWeekDay(date) {
+        const d = new Date(GAOKAO_YEAR, 5, date);
+        return '周' + weekDays[d.getDay()];
+    }
+
+    const dateLabels = {};
+    [7, 8, 9, 10].forEach(d => { dateLabels[d] = `6月${d}日 · ${getWeekDay(d)}`; });
+
+    // 为每科生成 Date 对象
+    function getExamStart(e) {
+        return new Date(GAOKAO_YEAR, 5, e.date, e.start[0], e.start[1], 0);
+    }
+    function getExamEnd(e) {
+        return new Date(GAOKAO_YEAR, 5, e.date, e.end[0], e.end[1], 0);
+    }
+
+    // ============================================================
+    //  渲染
+    // ============================================================
+
+    function pad2(n) { return String(n).padStart(2, '0'); }
+
+    function render() {
+        const root = document.getElementById('scheduleRoot');
+        root.innerHTML = '';
+
+        // 按日期分组
+        const groups = {};
+        exams.forEach(ex => {
+            if (!groups[ex.date]) groups[ex.date] = [];
+            groups[ex.date].push(ex);
+        });
+
+        Object.keys(groups).sort((a, b) => a - b).forEach(dateKey => {
+            const dayExams = groups[dateKey];
+
+            // 日期组容器
+            const grp = document.createElement('div');
+            grp.className = 'day-group';
+
+            const hdr = document.createElement('div');
+            hdr.className = 'day-header';
+            hdr.innerHTML = `<span class="day-num">${dateKey}</span><span class="day-date">${dateLabels[dateKey]}</span>`;
+            grp.appendChild(hdr);
+
+            // 按上下午分组
+            let lastSession = '';
+            dayExams.forEach(ex => {
+                const isAM = ex.start[0] < 12;
+                const session = isAM ? '上午' : '下午';
+
+                if (session !== lastSession) {
+                    lastSession = session;
+                    const div = document.createElement('div');
+                    div.className = 'session-divider';
+                    div.innerHTML = `<span class="line"></span><span class="label">${session}场</span><span class="line"></span>`;
+                    grp.appendChild(div);
+                }
+                const card = document.createElement('div');
+                card.className = 'exam-card';
+                card.id = `card-${ex.date}-${ex.name.replace(/[\/\s]/g,'')}`;
+
+                const startH = pad2(ex.start[0]), startM = pad2(ex.start[1]);
+                const endH = pad2(ex.end[0]), endM = pad2(ex.end[1]);
+                const durationMin = (ex.end[0]*60+ex.end[1]) - (ex.start[0]*60+ex.start[1]);
+                const durStr = durationMin >= 60
+                    ? `${Math.floor(durationMin/60)}时${durationMin%60 ? durationMin%60+'分' : ''}`
+                    : `${durationMin}分钟`;
+
+                card.innerHTML = `
+                    <span class="name">${ex.name}</span>
+                    <span class="meta">
+                        <span class="time-range">${startH}:${startM} – ${endH}:${endM}</span>
+                        <span class="tag ${tagClasses[ex.tag]}">${tagLabels[ex.tag]}</span>
+                        <span style="color:#bbb;font-size:0.72rem;">${durStr}</span>
+                    </span>
+                    <span class="countdown-mini" id="cd-${ex.date}-${ex.name.replace(/[\/\s]/g,'')}">
+                        <span class="cd-num" id="cd-d-${ex.date}-${ex.name.replace(/[\/\s]/g,'')}">--</span><span class="cd-unit">天</span>
+                        <span class="cd-sep">·</span>
+                        <span class="cd-num" id="cd-h-${ex.date}-${ex.name.replace(/[\/\s]/g,'')}">--</span><span class="cd-unit">时</span>
+                        <span class="cd-sep">·</span>
+                        <span class="cd-num" id="cd-m-${ex.date}-${ex.name.replace(/[\/\s]/g,'')}">--</span><span class="cd-unit">分</span>
+                        <span class="cd-sep">·</span>
+                        <span class="cd-num" id="cd-s-${ex.date}-${ex.name.replace(/[\/\s]/g,'')}">--</span><span class="cd-unit">秒</span>
+                    </span>
+                `;
+
+                grp.appendChild(card);
+            });
+
+            root.appendChild(grp);
+        });
+
+        // 提示标签
+        const hint = document.createElement('div');
+        hint.className = 'cd-legend';
+        hint.textContent = '距离每场考试还有';
+        root.appendChild(hint);
+    }
+
+    render();
+
+    // ============================================================
+    //  更新所有倒计时
+    // ============================================================
+
+    function updateAll() {
+        const now = new Date();
+
+        // --- 总体倒计时 ---
+        const gaokaoStart = new Date(GAOKAO_YEAR, 5, 7, 0, 0, 0);
+        const gaokaoEnd   = new Date(GAOKAO_YEAR, 5, 10, 11, 0, 0); // 最后一科结束
+        const heroSection = document.getElementById('heroSection');
+        const heroLabel   = document.getElementById('heroLabel');
+        const statusMsg   = document.getElementById('statusMsg');
+        const yearBadge   = document.getElementById('yearBadge');
+
+        yearBadge.textContent = GAOKAO_YEAR;
+
+        if (now >= gaokaoStart && now <= gaokaoEnd) {
+            // 高考进行中
+            const diff = gaokaoEnd - now;
+            setHero(diff, '距全部结束还有');
+            heroSection.classList.add('ongoing');
+            statusMsg.classList.add('show');
+        } else if (now < gaokaoStart) {
+            // 高考尚未开始
+            const diff = gaokaoStart - now;
+            setHero(diff, `距 ${GAOKAO_YEAR} 年高考还有`);
+            heroSection.classList.remove('ongoing');
+            statusMsg.classList.remove('show');
+        } else {
+            // 高考已结束
+            const nextStart = new Date(GAOKAO_YEAR + 1, 5, 7, 0, 0, 0);
+            const diff = nextStart - now;
+            setHero(diff, `距 ${GAOKAO_YEAR + 1} 年高考还有`);
+            heroSection.classList.remove('ongoing');
+            statusMsg.classList.remove('show');
+        }
+
+        // --- 每科倒计时 ---
+        exams.forEach(ex => {
+            const start = getExamStart(ex);
+            const end   = getExamEnd(ex);
+            const key = `${ex.date}-${ex.name.replace(/[\/\s]/g,'')}`;
+            const card = document.getElementById(`card-${key}`);
+
+            const dEl = document.getElementById(`cd-d-${key}`);
+            const hEl = document.getElementById(`cd-h-${key}`);
+            const mEl = document.getElementById(`cd-m-${key}`);
+            const sEl = document.getElementById(`cd-s-${key}`);
+
+            if (!dEl) return;
+
+            // 清除状态
+            card.classList.remove('exam-now', 'exam-done');
+
+            if (now < start) {
+                // 尚未开始 → 倒计时
+                const diff = start - now;
+                const d = Math.floor(diff / 86400000);
+                const h = Math.floor((diff % 86400000) / 3600000);
+                const m = Math.floor((diff % 3600000) / 60000);
+                const s = Math.floor((diff % 60000) / 1000);
+                dEl.textContent = pad2(d);
+                hEl.textContent = pad2(h);
+                mEl.textContent = pad2(m);
+                sEl.textContent = pad2(s);
+            } else if (now >= start && now <= end) {
+                // 正在考试
+                card.classList.add('exam-now');
+                const diff = end - now;
+                const h = Math.floor(diff / 3600000);
+                const m = Math.floor((diff % 3600000) / 60000);
+                const s = Math.floor((diff % 60000) / 1000);
+                dEl.textContent = '00';
+                hEl.textContent = pad2(h);
+                mEl.textContent = pad2(m);
+                sEl.textContent = pad2(s);
+
+                // 在科目名后加"考试中"徽章
+                let badge = card.querySelector('.exam-badge');
+                if (!badge) {
+                    badge = document.createElement('span');
+                    badge.className = 'exam-badge';
+                    badge.textContent = '考试中';
+                    card.querySelector('.name').appendChild(badge);
+                }
+            } else {
+                // 已结束
+                card.classList.add('exam-done');
+                dEl.textContent = '—';
+                hEl.textContent = '';
+                mEl.textContent = '';
+                sEl.textContent = '';
+                // 清除 badge
+                const badge = card.querySelector('.exam-badge');
+                if (badge) badge.remove();
+            }
+        });
+
+        // --- 当前考试进程状态 ---
+        const ceEl = document.getElementById('currentExam');
+        const ceLabel = document.getElementById('ceLabel');
+        const ceBadge = document.getElementById('ceBadge');
+        const ceName = document.getElementById('ceName');
+        const ceTime = document.getElementById('ceTime');
+        const ceCountdown = document.getElementById('ceCountdown');
+        const ceFill = document.getElementById('ceProgressFill');
+        const ceStart = document.getElementById('ceProgressStart');
+        const ceEnd = document.getElementById('ceProgressEnd');
+
+        // 找到当前/下一场/上一场考试
+        let current = null, next = null, lastDone = null;
+        for (const ex of exams) {
+            const s = getExamStart(ex);
+            const e = getExamEnd(ex);
+            if (now >= s && now <= e) { current = ex; break; }
+            if (now < s && !next) next = ex;
+            if (now > e) lastDone = ex;
+        }
+
+        if (current) {
+            // 当前有考试
+            const s = getExamStart(current);
+            const e = getExamEnd(current);
+            const total = e - s;
+            const elapsed = now - s;
+            const remain = e - now;
+            const pct = Math.min(100, Math.max(0, (elapsed / total) * 100));
+
+            ceEl.classList.add('show');
+            const sh = pad2(current.start[0]), sm = pad2(current.start[1]);
+            const eh = pad2(current.end[0]), em = pad2(current.end[1]);
+            ceLabel.textContent = '当前考试';
+            ceBadge.textContent = '进行中';
+            ceBadge.className = 'ce-status-badge ce-ongoing';
+            ceName.textContent = current.name;
+            ceTime.textContent = `${sh}:${sm} ~ ${eh}:${em}`;
+            const rh = Math.floor(remain / 3600000);
+            const rm = Math.floor((remain % 3600000) / 60000);
+            const rs = Math.floor((remain % 60000) / 1000);
+            ceCountdown.textContent = `${pad2(rh)}:${pad2(rm)}:${pad2(rs)}`;
+            ceFill.style.width = `${pct}%`;
+            ceStart.textContent = '开始';
+            ceEnd.textContent = '剩余 ' + ceCountdown.textContent;
+        } else if (next) {
+            // 下一场考试
+            const s = getExamStart(next);
+            const diff = s - now;
+            const d = Math.floor(diff / 86400000);
+            const h = Math.floor((diff % 86400000) / 3600000);
+            const m = Math.floor((diff % 3600000) / 60000);
+            const s_ = Math.floor((diff % 60000) / 1000);
+
+            ceEl.classList.add('show');
+            const sh = pad2(next.start[0]), sm = pad2(next.start[1]);
+            const eh = pad2(next.end[0]), em = pad2(next.end[1]);
+            ceLabel.textContent = '下一场';
+            ceBadge.textContent = '即将开始';
+            ceBadge.className = 'ce-status-badge ce-upcoming';
+            ceName.textContent = next.name;
+            ceTime.textContent = `${sh}:${sm} ~ ${eh}:${em}`;
+            ceCountdown.textContent = d > 0
+                ? `${d}天 ${pad2(h)}:${pad2(m)}:${pad2(s_)}`
+                : `${pad2(h)}:${pad2(m)}:${pad2(s_)}`;
+            ceFill.style.width = '0%';
+            ceStart.textContent = '距离开考';
+            ceEnd.textContent = ceCountdown.textContent;
+        } else if (lastDone) {
+            // 全部结束
+            ceEl.classList.add('show');
+            ceLabel.textContent = '高考进程';
+            ceBadge.textContent = '已全部完成';
+            ceBadge.className = 'ce-status-badge ce-done';
+            ceName.textContent = '所有考试已结束';
+            ceTime.textContent = '—';
+            ceCountdown.textContent = '—';
+            ceFill.style.width = '100%';
+            ceStart.textContent = '全部完成';
+            ceEnd.textContent = '金榜题名';
+        } else {
+            ceEl.classList.remove('show');
+        }
+    }
+
+    function setHero(diff, label) {
+        const d = Math.floor(diff / 86400000);
+        const h = Math.floor((diff % 86400000) / 3600000);
+        const m = Math.floor((diff % 3600000) / 60000);
+        const s = Math.floor((diff % 60000) / 1000);
+
+        document.getElementById('hDays').textContent   = pad2(d);
+        document.getElementById('hHours').textContent  = pad2(h);
+        document.getElementById('hMins').textContent   = pad2(m);
+        document.getElementById('hSecs').textContent   = pad2(s);
+        document.getElementById('heroLabel').textContent = label;
+    }
+
+    updateAll();
+    setInterval(updateAll, 1000);
+</script>
+
+</body>
+</html>
