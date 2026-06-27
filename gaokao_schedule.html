@@ -2,20 +2,129 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>四川高考时间表 · 3+1+2</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>四川高考倒计时 · 3+1+2</title>
+    <meta name="theme-color" content="#c8946a" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#1c1814" media="(prefers-color-scheme: dark)">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="高考倒计时">
+    <meta name="application-name" content="高考倒计时">
+    <meta name="description" content="四川 3+1+2 新高考倒计时与日程安排，支持选科标记、深色模式">
+    <link rel="manifest" href="./manifest.json">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='32' fill='%23c8946a'/%3E%3Ctext x='96' y='126' text-anchor='middle' font-size='100' font-weight='700' font-family='sans-serif' fill='white'%3E考%3C/text%3E%3C/svg%3E">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        /* ===== 主题变量 ===== */
+        :root {
+            --bg: #f8f4ee;
+            --bg-card: #ffffff;
+            --bg-card-hover: #fdfaf6;
+            --bg-card-selected: #fdf9f4;
+            --bg-hero: #ffffff;
+            --bg-soft: #f0e8e0;
+            --bg-tag-mandatory: #f0e8e0;
+            --bg-tag-elective: #e8ece4;
+            --bg-tag-special: #f0e8e0;
+            --bg-tag-selected: #c8946a;
+            --bg-selector: #ffffff;
+            --bg-selector-option: #faf5f0;
+            --bg-overlay: #f8f4ee;
+            --bg-fs-next: #ffffff;
+
+            --text-primary: #3a3228;
+            --text-secondary: #a09080;
+            --text-muted: #c0b0a0;
+            --text-light: #d8d0c8;
+            --text-on-accent: #ffffff;
+            --text-accent: #c8946a;
+            --text-elective: #7a9a7a;
+            --text-special: #b08070;
+            --text-tag-mandatory: #c8946a;
+            --text-tag-elective: #7a9a7a;
+            --text-tag-special: #b08070;
+            --text-tag-dimmed: #d0c8c0;
+            --text-hero: #c8946a;
+
+            --border: #e8e0d8;
+            --border-card: #e8e0d8;
+            --border-card-hover: #dcd0c8;
+            --border-card-selected: #dcc8b8;
+            --border-selector: #e8e0d8;
+            --border-selector-option: #e8e0d8;
+            --border-selector-active: #c8946a;
+
+            --shadow-sm: 0 1px 4px rgba(0,0,0,0.04);
+            --shadow-md: 0 2px 12px rgba(0,0,0,0.05);
+            --shadow-lg: 0 4px 16px rgba(0,0,0,0.06);
+            --shadow-btn: 0 4px 16px rgba(200,148,106,0.3);
+            --shadow-btn-hover: 0 6px 20px rgba(200,148,106,0.4);
+
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-full: 999px;
+
+            --transition: 0.25s ease;
+        }
+
+        [data-theme="dark"] {
+            --bg: #1c1814;
+            --bg-card: #2a2420;
+            --bg-card-hover: #322c26;
+            --bg-card-selected: #322c26;
+            --bg-hero: #2a2420;
+            --bg-soft: #322c26;
+            --bg-tag-mandatory: #3d3228;
+            --bg-tag-elective: #283028;
+            --bg-tag-special: #3d3028;
+            --bg-tag-selected: #d4a880;
+            --bg-selector: #2a2420;
+            --bg-selector-option: #322c26;
+            --bg-overlay: #1c1814;
+            --bg-fs-next: #2a2420;
+
+            --text-primary: #e8e0d8;
+            --text-secondary: #a09088;
+            --text-muted: #706860;
+            --text-light: #5a5248;
+            --text-on-accent: #ffffff;
+            --text-accent: #d4a880;
+            --text-elective: #8aaa8a;
+            --text-special: #c09078;
+            --text-tag-mandatory: #d4a880;
+            --text-tag-elective: #8aaa8a;
+            --text-tag-special: #c09078;
+            --text-tag-dimmed: #5a5248;
+            --text-hero: #d4a880;
+
+            --border: #3a342e;
+            --border-card: #3a342e;
+            --border-card-hover: #4a443e;
+            --border-card-selected: #4a3e32;
+            --border-selector: #3a342e;
+            --border-selector-option: #3a342e;
+            --border-selector-active: #d4a880;
+
+            --shadow-sm: 0 1px 4px rgba(0,0,0,0.2);
+            --shadow-md: 0 2px 12px rgba(0,0,0,0.25);
+            --shadow-lg: 0 4px 16px rgba(0,0,0,0.3);
+            --shadow-btn: 0 4px 16px rgba(212,168,128,0.25);
+            --shadow-btn-hover: 0 6px 20px rgba(212,168,128,0.35);
+        }
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
                 "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
             min-height: 100vh;
-            background: linear-gradient(135deg, #fef6f0 0%, #fff5ee 50%, #fef0e8 100%);
+            background: var(--bg);
             display: flex;
             justify-content: center;
             align-items: flex-start;
             padding: 30px 16px;
+            color: var(--text-primary);
+            transition: background var(--transition), color var(--transition);
         }
 
         .container {
@@ -30,10 +139,10 @@
         }
 
         .header h1 {
-            font-size: 2.2rem;
-            font-weight: 800;
-            color: #dc3545;
-            letter-spacing: 3px;
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-accent);
+            letter-spacing: 4px;
         }
 
         .header .sub {
@@ -42,36 +151,37 @@
             align-items: center;
             gap: 10px;
             margin-top: 6px;
-            color: #888;
-            font-size: 0.85rem;
+            color: var(--text-secondary);
+            font-size: 0.82rem;
             letter-spacing: 1px;
         }
 
         .header .sub .badge {
-            background: #dc3545;
+            background: var(--text-accent);
             padding: 2px 14px;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            color: #fff;
-            font-weight: 600;
+            border-radius: var(--radius-full);
+            font-size: 0.72rem;
+            color: var(--text-on-accent);
+            font-weight: 500;
         }
 
         /* ===== 总体倒计时 ===== */
         .hero-countdown {
-            background: #fff;
-            border-radius: 16px;
-            padding: 20px;
+            background: var(--bg-hero);
+            border-radius: var(--radius-lg);
+            padding: 22px 20px;
             margin-bottom: 20px;
             text-align: center;
-            box-shadow: 0 2px 12px rgba(220,53,69,0.06);
-            border: 1px solid rgba(220,53,69,0.08);
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--border);
+            transition: background var(--transition), border var(--transition);
         }
 
         .hero-countdown .label {
-            color: #666;
-            font-size: 0.8rem;
+            color: var(--text-secondary);
+            font-size: 0.78rem;
             letter-spacing: 2px;
-            margin-bottom: 12px;
+            margin-bottom: 14px;
             font-weight: 500;
         }
 
@@ -79,51 +189,52 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            gap: 6px;
+            gap: 4px;
         }
 
         .hero-countdown .timer .num {
-            font-size: 2.4rem;
-            font-weight: 800;
-            color: #dc3545;
-            background: #fef6f0;
-            border-radius: 10px;
-            padding: 4px 12px;
-            min-width: 56px;
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: var(--text-hero);
+            background: var(--bg-soft);
+            border-radius: var(--radius-sm);
+            padding: 4px 10px;
+            min-width: 50px;
             text-align: center;
             font-variant-numeric: tabular-nums;
             line-height: 1.3;
+            transition: background var(--transition), color var(--transition);
         }
 
         .hero-countdown .timer .sep {
-            font-size: 2rem;
-            font-weight: 800;
-            color: #ddd;
+            font-size: 1.8rem;
+            font-weight: 300;
+            color: var(--text-light);
             padding-bottom: 4px;
         }
 
         .hero-countdown .timer .unit {
-            font-size: 0.65rem;
-            color: #999;
+            font-size: 0.62rem;
+            color: var(--text-muted);
             display: block;
             margin-top: 2px;
         }
 
         .hero-countdown.ongoing .timer .num {
-            background: #fff0f0;
+            background: var(--bg-soft);
             animation: pulseSoft 1.5s ease-in-out infinite;
         }
 
         @keyframes pulseSoft {
-            0%,100% { box-shadow: 0 0 8px rgba(220,53,69,0.08); }
-            50% { box-shadow: 0 0 20px rgba(220,53,69,0.18); }
+            0%,100% { box-shadow: 0 0 8px rgba(200,148,106,0.08); }
+            50% { box-shadow: 0 0 20px rgba(200,148,106,0.18); }
         }
 
         .status-msg {
-            color: #dc3545;
-            font-size: 0.95rem;
-            font-weight: 600;
-            letter-spacing: 2px;
+            color: var(--text-accent);
+            font-size: 0.9rem;
+            font-weight: 500;
+            letter-spacing: 3px;
             display: none;
             margin-bottom: 16px;
             text-align: center;
@@ -132,19 +243,18 @@
 
         /* ===== 当前考试进程 ===== */
         .current-exam {
-            background: #fff;
-            border-radius: 16px;
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
             padding: 18px 22px;
             margin-bottom: 20px;
             display: none;
-            box-shadow: 0 2px 12px rgba(220,53,69,0.06);
-            border: 1px solid rgba(220,53,69,0.08);
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--border);
             animation: fadeUp 0.4s ease;
-            transition: border-color 0.3s;
+            transition: border-color 0.3s, background var(--transition);
         }
         .current-exam.ce-waiting {
-            border-color: #e6a800;
-            box-shadow: 0 2px 12px rgba(230,168,0,0.06);
+            border-color: #c8a870;
         }
         .current-exam.show { display: block; }
 
@@ -158,21 +268,21 @@
         }
 
         .current-exam .ce-header .ce-label {
-            color: #888;
-            font-size: 0.72rem;
+            color: var(--text-secondary);
+            font-size: 0.7rem;
             letter-spacing: 2px;
             font-weight: 500;
         }
 
         .current-exam .ce-header .ce-status-badge {
-            font-size: 0.65rem;
+            font-size: 0.62rem;
             padding: 2px 12px;
-            border-radius: 20px;
-            font-weight: 600;
+            border-radius: var(--radius-full);
+            font-weight: 500;
         }
         .ce-status-badge.ce-ongoing {
-            background: #fff0f0;
-            color: #dc3545;
+            background: var(--bg-soft);
+            color: var(--text-accent);
             display: inline-flex;
             align-items: center;
             gap: 4px;
@@ -182,36 +292,50 @@
             width: 5px;
             height: 5px;
             border-radius: 50%;
-            background: #dc3545;
+            background: var(--text-accent);
             animation: pulseDot 1.2s ease-in-out infinite;
         }
         .ce-status-badge.ce-upcoming {
-            background: #fff8e8;
-            color: #e6a800;
+            background: #f0ece4;
+            color: #b89860;
             display: inline-flex;
             align-items: center;
             gap: 4px;
+        }
+        [data-theme="dark"] .ce-status-badge.ce-upcoming {
+            background: #322c24;
+            color: #c8a870;
         }
         .ce-status-badge.ce-upcoming::before {
             content: '';
             width: 5px;
             height: 5px;
             border-radius: 50%;
-            background: #e6a800;
+            background: #b89860;
+        }
+        [data-theme="dark"] .ce-status-badge.ce-upcoming::before {
+            background: #c8a870;
         }
         .ce-status-badge.ce-done {
-            background: #f0faf0;
-            color: #28a745;
+            background: #eaf2ea;
+            color: #689868;
             display: inline-flex;
             align-items: center;
             gap: 4px;
+        }
+        [data-theme="dark"] .ce-status-badge.ce-done {
+            background: #283828;
+            color: #78b078;
         }
         .ce-status-badge.ce-done::before {
             content: '';
             width: 5px;
             height: 5px;
             border-radius: 50%;
-            background: #28a745;
+            background: #689868;
+        }
+        [data-theme="dark"] .ce-status-badge.ce-done::before {
+            background: #78b078;
         }
 
         .current-exam .ce-body {
@@ -223,44 +347,174 @@
         }
 
         .current-exam .ce-body .ce-name {
-            color: #222;
-            font-size: 1.2rem;
-            font-weight: 700;
+            color: var(--text-primary);
+            font-size: 1.15rem;
+            font-weight: 600;
             letter-spacing: 1px;
         }
 
         .current-exam .ce-body .ce-time {
-            color: #999;
-            font-size: 0.8rem;
+            color: var(--text-secondary);
+            font-size: 0.78rem;
         }
 
         .current-exam .ce-body .ce-countdown-num {
-            color: #dc3545;
-            font-size: 1.3rem;
-            font-weight: 700;
+            color: var(--text-accent);
+            font-size: 1.2rem;
+            font-weight: 600;
             font-variant-numeric: tabular-nums;
         }
 
         .ce-progress-wrap { width: 100%; margin-top: 12px; }
         .ce-progress-bar {
             width: 100%; height: 4px;
-            background: #f0f0f0;
+            background: var(--border);
             border-radius: 4px;
             overflow: hidden;
         }
         .ce-progress-bar .ce-progress-fill {
             height: 100%; border-radius: 4px;
-            background: linear-gradient(90deg, #dc3545, #ff6b6b);
+            background: linear-gradient(90deg, var(--text-accent), #e8a098);
             transition: width 0.5s ease;
             width: 0%;
         }
         .ce-progress-wrap .ce-progress-label {
             display: flex;
             justify-content: space-between;
-            color: #bbb;
-            font-size: 0.6rem;
+            color: var(--text-muted);
+            font-size: 0.58rem;
             margin-top: 4px;
         }
+
+        /* ===== 选科标记 ===== */
+        .subject-selector {
+            background: var(--bg-selector);
+            border-radius: var(--radius-md);
+            padding: 16px 20px;
+            margin-bottom: 18px;
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--border-selector);
+            transition: background var(--transition), border var(--transition);
+        }
+        .ss-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 14px;
+        }
+        .ss-header .ss-title {
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            letter-spacing: 2px;
+        }
+        .ss-header .ss-hint {
+            font-size: 0.58rem;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+        }
+        .ss-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        .ss-row:last-child {
+            margin-bottom: 0;
+        }
+        .ss-row .ss-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+            font-weight: 500;
+            min-width: 4em;
+            flex-shrink: 0;
+        }
+        .ss-option {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            padding: 5px 18px;
+            border-radius: var(--radius-full);
+            font-size: 0.78rem;
+            font-weight: 500;
+            cursor: pointer;
+            border: 1.5px solid var(--border-selector-option);
+            background: var(--bg-selector-option);
+            color: var(--text-secondary);
+            transition: all var(--transition);
+            user-select: none;
+            -webkit-user-select: none;
+            letter-spacing: 1px;
+        }
+        .ss-option:hover {
+            border-color: var(--text-muted);
+        }
+        .ss-option.active {
+            border-color: var(--border-selector-active);
+            background: var(--bg-soft);
+            color: var(--text-accent);
+        }
+
+        /* -- 卡片高亮状态 -- */
+        .exam-card.subject-selected {
+            background: var(--bg-card-selected);
+            border-color: var(--border-card-selected);
+        }
+        .exam-card.subject-selected .tag-elective {
+            background: var(--bg-tag-selected);
+            color: var(--text-on-accent);
+        }
+        .exam-card.subject-selected .sel-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            color: var(--text-elective);
+            font-size: 0.6rem;
+            font-weight: 500;
+            letter-spacing: 1px;
+        }
+        .exam-card.subject-selected .sel-badge::before {
+            content: '';
+            width: 4px; height: 4px;
+            border-radius: 50%;
+            background: var(--text-elective);
+            flex-shrink: 0;
+        }
+
+        .exam-card.subject-dimmed {
+            opacity: 0.35;
+            transition: opacity var(--transition);
+        }
+        .exam-card.subject-dimmed:hover {
+            opacity: 0.5;
+        }
+        .exam-card.subject-dimmed .tag-elective {
+            background: transparent;
+            border: 1px solid var(--text-tag-dimmed);
+            color: var(--text-tag-dimmed);
+        }
+        .exam-card.subject-dimmed .sel-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            color: var(--text-tag-dimmed);
+            font-size: 0.6rem;
+            font-weight: 500;
+        }
+        .exam-card.subject-dimmed .sel-badge::before {
+            content: '';
+            width: 4px; height: 4px;
+            border-radius: 50%;
+            border: 1px solid var(--text-tag-dimmed);
+            background: transparent;
+            flex-shrink: 0;
+        }
+
+        .exam-card .sel-badge { display: none; }
+        .exam-card.exam-done .sel-badge { display: none !important; }
 
         /* ===== 日程标题 ===== */
         .section-title {
@@ -283,17 +537,17 @@
         }
 
         .day-header .day-num {
-            font-size: 0.9rem;
-            font-weight: 700;
-            color: #dc3545;
-            background: #fef0e8;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-accent);
+            background: var(--bg-soft);
             padding: 2px 10px;
-            border-radius: 6px;
+            border-radius: var(--radius-sm);
         }
 
         .day-header .day-date {
-            color: #aaa;
-            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-size: 0.78rem;
             letter-spacing: 1px;
         }
 
@@ -308,11 +562,11 @@
         .session-divider .line {
             flex: 1;
             height: 1px;
-            background: #eee;
+            background: var(--border);
         }
         .session-divider .label {
-            font-size: 0.7rem;
-            color: #bbb;
+            font-size: 0.68rem;
+            color: var(--text-muted);
             letter-spacing: 2px;
             font-weight: 500;
             white-space: nowrap;
@@ -320,30 +574,32 @@
 
         /* ===== 考试卡片 ===== */
         .exam-card {
-            background: #fff;
-            border: 1px solid #eee;
-            border-radius: 12px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-card);
+            border-radius: var(--radius-md);
             padding: 12px 16px;
             margin-bottom: 6px;
             display: flex;
             flex-wrap: wrap;
             align-items: center;
             gap: 6px 12px;
-            transition: all 0.2s ease;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.02);
+            transition: all var(--transition);
+            box-shadow: var(--shadow-sm);
         }
 
         .exam-card:hover {
-            border-color: #f0c0c0;
-            box-shadow: 0 2px 8px rgba(220,53,69,0.06);
+            border-color: var(--border-card-hover);
+            background: var(--bg-card-hover);
+            box-shadow: var(--shadow-md);
         }
 
         .exam-card .name {
-            color: #222;
-            font-size: 0.95rem;
+            color: var(--text-primary);
+            font-size: 0.92rem;
             font-weight: 600;
-            min-width: 68px;
+            min-width: 64px;
             letter-spacing: 1px;
+            transition: color var(--transition);
         }
 
         .exam-card .meta {
@@ -355,20 +611,21 @@
         }
 
         .exam-card .meta .time-range {
-            color: #888;
-            font-size: 0.78rem;
+            color: var(--text-secondary);
+            font-size: 0.75rem;
             font-weight: 500;
         }
 
         .exam-card .meta .tag {
-            font-size: 0.62rem;
+            font-size: 0.6rem;
             padding: 2px 10px;
-            border-radius: 20px;
+            border-radius: var(--radius-full);
             font-weight: 500;
+            transition: all var(--transition);
         }
-        .tag-mandatory { background: #fff0f0; color: #dc3545; }
-        .tag-elective { background: #f0f5ff; color: #4a8fe0; }
-        .tag-special { background: #fff5f0; color: #e07050; }
+        .tag-mandatory { background: var(--bg-tag-mandatory); color: var(--text-tag-mandatory); }
+        .tag-elective { background: var(--bg-tag-elective); color: var(--text-tag-elective); }
+        .tag-special { background: var(--bg-tag-special); color: var(--text-tag-special); }
 
         .exam-card .countdown-mini {
             display: flex;
@@ -379,26 +636,27 @@
         }
 
         .exam-card .countdown-mini .cd-num {
-            font-size: 0.9rem;
-            font-weight: 700;
-            color: #555;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-primary);
             font-variant-numeric: tabular-nums;
             min-width: 18px;
             text-align: center;
+            transition: color var(--transition);
         }
 
         .exam-card .countdown-mini .cd-unit {
-            font-size: 0.6rem;
-            color: #bbb;
+            font-size: 0.58rem;
+            color: var(--text-muted);
         }
 
         .exam-card .countdown-mini .cd-sep {
-            color: #ddd;
-            font-weight: 700;
+            color: var(--text-light);
+            font-weight: 400;
         }
 
         .exam-card.exam-done {
-            opacity: 0.55;
+            opacity: 0.5;
         }
         .exam-card.exam-done .countdown-mini .cd-num,
         .exam-card.exam-done .countdown-mini .cd-unit,
@@ -409,44 +667,46 @@
             display: inline-flex;
             align-items: center;
             gap: 3px;
-            font-size: 0.65rem;
-            color: #28a745;
-            font-weight: 600;
+            font-size: 0.62rem;
+            color: #689868;
+            font-weight: 500;
             letter-spacing: 1px;
         }
+        [data-theme="dark"] .exam-done-badge { color: #78b078; }
         .exam-done-badge::before {
             content: '';
-            width: 6px;
-            height: 6px;
+            width: 5px;
+            height: 5px;
             border-radius: 50%;
-            background: #28a745;
+            background: #689868;
         }
+        [data-theme="dark"] .exam-done-badge::before { background: #78b078; }
 
         .exam-card.exam-now {
-            border-color: #dc3545;
-            background: #fff8f8;
+            border-color: var(--text-accent);
+            background: var(--bg-card-selected);
         }
-        .exam-card.exam-now .countdown-mini .cd-num { color: #dc3545; }
-        .exam-card.exam-now .name { color: #dc3545; }
+        .exam-card.exam-now .countdown-mini .cd-num { color: var(--text-accent); }
+        .exam-card.exam-now .name { color: var(--text-accent); }
 
         .exam-card.exam-now .exam-badge {
             display: inline-flex;
             align-items: center;
             gap: 3px;
-            font-size: 0.6rem;
+            font-size: 0.58rem;
             padding: 1px 10px;
-            border-radius: 20px;
-            background: #fff0f0;
-            color: #dc3545;
+            border-radius: var(--radius-full);
+            background: var(--bg-soft);
+            color: var(--text-accent);
             margin-left: 6px;
-            font-weight: 600;
+            font-weight: 500;
         }
         .exam-card.exam-now .exam-badge::before {
             content: '';
-            width: 5px;
-            height: 5px;
+            width: 4px;
+            height: 4px;
             border-radius: 50%;
-            background: #dc3545;
+            background: var(--text-accent);
             animation: pulseDot 1.2s ease-in-out infinite;
         }
         @keyframes pulseDot {
@@ -456,20 +716,21 @@
 
         .cd-legend {
             text-align: center;
-            color: #ccc;
-            font-size: 0.6rem;
+            color: var(--text-light);
+            font-size: 0.58rem;
             letter-spacing: 1px;
             margin-bottom: 14px;
         }
 
         .footer {
             text-align: center;
-            color: #dc3545;
-            font-size: 0.85rem;
+            color: var(--text-accent);
+            font-size: 0.82rem;
             padding: 18px 0 6px;
-            border-top: 1px solid #f0e0e0;
+            border-top: 1px solid var(--border);
             letter-spacing: 2px;
             font-weight: 500;
+            transition: color var(--transition), border var(--transition);
         }
 
         @keyframes fadeUp {
@@ -479,28 +740,45 @@
 
         .container { animation: fadeUp 0.4s ease; }
 
-        /* ===== 全屏切换按钮 ===== */
-        .fs-toggle {
+        /* ===== 底部操作按钮 ===== */
+        .action-bar {
             position: fixed;
             bottom: 24px;
             right: 24px;
             z-index: 100;
             display: flex;
+            gap: 10px;
+        }
+        .action-btn {
+            display: flex;
             align-items: center;
-            gap: 6px;
-            background: #dc3545;
-            color: #fff;
+            justify-content: center;
+            gap: 5px;
+            background: var(--text-accent);
+            color: var(--text-on-accent);
             border: none;
-            border-radius: 12px;
+            border-radius: var(--radius-md);
             padding: 10px 18px;
-            font-size: 0.85rem;
-            font-weight: 600;
+            font-size: 0.82rem;
+            font-weight: 500;
             cursor: pointer;
             letter-spacing: 1px;
-            box-shadow: 0 4px 16px rgba(220,53,69,0.3);
-            transition: all 0.25s;
+            box-shadow: var(--shadow-btn);
+            transition: all var(--transition);
+            font-family: inherit;
+            line-height: 1;
         }
-        .fs-toggle:hover { background: #c82333; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(220,53,69,0.4); }
+        .action-btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-btn-hover); }
+        .action-btn-secondary {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--border);
+        }
+        .action-btn-secondary:hover {
+            background: var(--bg-card-hover);
+            box-shadow: var(--shadow-lg);
+        }
 
         /* ===== 全屏覆盖层 ===== */
         .fs-overlay {
@@ -508,11 +786,12 @@
             position: fixed;
             inset: 0;
             z-index: 9999;
-            background: #fef6f0;
-            color: #333;
+            background: var(--bg-overlay);
+            color: var(--text-primary);
             overflow: hidden;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
                 "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+            transition: background var(--transition);
         }
         .fs-overlay.open { display: block; }
 
@@ -521,19 +800,20 @@
             top: 20px;
             right: 24px;
             z-index: 10;
-            background: #dc3545;
-            color: #fff;
+            background: var(--text-accent);
+            color: var(--text-on-accent);
             border: none;
-            border-radius: 8px;
+            border-radius: var(--radius-sm);
             padding: 6px 16px;
-            font-size: 0.8rem;
+            font-size: 0.78rem;
             cursor: pointer;
             letter-spacing: 1px;
             font-weight: 500;
-            transition: all 0.2s;
-            box-shadow: 0 2px 8px rgba(220,53,69,0.2);
+            transition: all var(--transition);
+            box-shadow: var(--shadow-btn);
+            font-family: inherit;
         }
-        .fs-exit:hover { background: #c82333; transform: translateY(-1px); }
+        .fs-exit:hover { transform: translateY(-1px); box-shadow: var(--shadow-btn-hover); }
 
         .fs-inner {
             display: flex;
@@ -546,8 +826,8 @@
         }
 
         .fs-header {
-            font-size: 0.9rem;
-            color: #999;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
             letter-spacing: 4px;
             margin-bottom: 1.2vh;
             font-weight: 500;
@@ -564,29 +844,31 @@
             flex-shrink: 0;
         }
         .fs-status-dot {
-            width: 8px;
-            height: 8px;
+            width: 7px;
+            height: 7px;
             border-radius: 50%;
-            background: #dc3545;
+            background: var(--text-accent);
             animation: pulseDot 1.2s ease-in-out infinite;
+            transition: background var(--transition);
         }
         .fs-status-text {
-            font-size: 0.8rem;
+            font-size: 0.78rem;
             letter-spacing: 3px;
             font-weight: 500;
+            transition: color var(--transition);
         }
         .fs-status-bar.status-waiting .fs-status-dot {
-            background: #e6a800;
+            background: #c8a870;
             animation: none;
         }
-        .fs-status-bar.status-waiting .fs-status-text { color: #e6a800; }
-        .fs-status-bar.status-ongoing .fs-status-dot { background: #dc3545; }
-        .fs-status-bar.status-ongoing .fs-status-text { color: #dc3545; }
+        .fs-status-bar.status-waiting .fs-status-text { color: #c8a870; }
+        .fs-status-bar.status-ongoing .fs-status-dot { background: var(--text-accent); }
+        .fs-status-bar.status-ongoing .fs-status-text { color: var(--text-accent); }
         .fs-status-bar.status-done .fs-status-dot {
-            background: #28a745;
+            background: #78b078;
             animation: none;
         }
-        .fs-status-bar.status-done .fs-status-text { color: #28a745; }
+        .fs-status-bar.status-done .fs-status-text { color: #78b078; }
 
         /* -- 主体区域（flex 撑满） -- */
         .fs-main {
@@ -599,8 +881,8 @@
         }
 
         .fs-current-label {
-            font-size: 0.8rem;
-            color: #bbb;
+            font-size: 0.78rem;
+            color: var(--text-muted);
             letter-spacing: 4px;
             margin-bottom: 1.2vh;
             font-weight: 500;
@@ -608,32 +890,33 @@
 
         .fs-current-name {
             font-size: clamp(2rem, 6vh, 4rem);
-            font-weight: 800;
-            color: #dc3545;
-            letter-spacing: 0.15em;
+            font-weight: 700;
+            color: var(--text-hero);
+            letter-spacing: 0.12em;
             margin-bottom: 0.3vh;
             line-height: 1.2;
+            transition: color var(--transition);
         }
 
         .fs-current-time {
             font-size: clamp(0.85rem, 1.6vh, 1.1rem);
-            color: #bbb;
+            color: var(--text-muted);
             letter-spacing: 3px;
             margin-bottom: 2vh;
         }
 
         /* -- 等待考试时的配色 -- */
-        .fs-state-waiting .fs-current-name { color: #e6a800; }
-        .fs-state-waiting .fs-timer-digits .digit-block .num { color: #e6a800; }
+        .fs-state-waiting .fs-current-name { color: #c8a870; }
+        .fs-state-waiting .fs-timer-digits .digit-block .num { color: #c8a870; }
         .fs-state-waiting .fs-progress-fill {
-            background: linear-gradient(90deg, #f5af19, #e6a800);
+            background: linear-gradient(90deg, #d4b888, #c8a870);
         }
-        .fs-state-waiting .fs-next-countdown { color: #dc3545; }
+        .fs-state-waiting .fs-next-countdown { color: var(--text-accent); }
 
         /* -- 计时器数字块（填充横向空间） -- */
         .fs-timer-wrap {
             width: 100%;
-            max-width: 700px;
+            max-width: 860px;
             margin-bottom: 2.5vh;
         }
 
@@ -641,7 +924,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            gap: 0.6vw;
+            gap: 0.4vw;
         }
 
         .fs-timer-digits .digit-block {
@@ -649,21 +932,22 @@
             flex-direction: column;
             align-items: center;
             flex: 1;
-            max-width: 120px;
+            min-width: 0;
         }
 
         .fs-timer-digits .digit-block .num {
             font-size: clamp(2.8rem, 11vh, 7rem);
-            font-weight: 800;
-            color: #dc3545;
+            font-weight: 700;
+            color: var(--text-hero);
             font-variant-numeric: tabular-nums;
             line-height: 1;
             letter-spacing: 0;
+            transition: color var(--transition);
         }
 
         .fs-timer-digits .digit-block .label {
-            font-size: 0.65rem;
-            color: #ccc;
+            font-size: 0.62rem;
+            color: var(--text-muted);
             margin-top: 4px;
             letter-spacing: 1px;
         }
@@ -671,36 +955,38 @@
         .fs-timer-digits .digit-sep {
             font-size: clamp(2rem, 8vh, 5rem);
             font-weight: 200;
-            color: #ddd;
-            padding-bottom: 1.2em;
+            color: var(--text-light);
             flex-shrink: 0;
             width: 0.4em;
             text-align: center;
+            line-height: 1;
+            align-self: center;
+            transition: color var(--transition);
         }
 
         /* -- 进度条（全宽） -- */
         .fs-progress-wrap {
             width: 100%;
-            max-width: 700px;
+            max-width: 860px;
             margin-bottom: 2.5vh;
         }
         .fs-progress-bar {
-            width: 100%; height: 5px;
-            background: #f0e0e0;
+            width: 100%; height: 4px;
+            background: var(--border);
             border-radius: 4px;
             overflow: hidden;
         }
         .fs-progress-fill {
             height: 100%; border-radius: 4px;
-            background: linear-gradient(90deg, #f5af19, #f12711);
+            background: linear-gradient(90deg, var(--text-accent), #e8a098);
             transition: width 0.5s ease;
             width: 0%;
         }
         .fs-progress-label {
             display: flex;
             justify-content: space-between;
-            color: #ccc;
-            font-size: 0.7rem;
+            color: var(--text-muted);
+            font-size: 0.68rem;
             margin-top: 5px;
         }
 
@@ -712,35 +998,38 @@
             gap: clamp(8px, 2vw, 24px);
             flex-wrap: wrap;
             width: 100%;
-            max-width: 700px;
+            max-width: 860px;
             padding: 10px 20px;
-            background: #fff;
-            border-radius: 12px;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.04);
-            border: 1px solid #f0e0e0;
+            background: var(--bg-fs-next);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--border);
             margin-bottom: 2vh;
             flex-shrink: 0;
+            transition: background var(--transition), border var(--transition);
         }
         .fs-next-label {
-            font-size: 0.7rem;
-            color: #bbb;
+            font-size: 0.68rem;
+            color: var(--text-muted);
             letter-spacing: 2px;
         }
         .fs-next-name {
-            font-size: 1rem;
-            font-weight: 700;
-            color: #555;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-primary);
             letter-spacing: 1px;
+            transition: color var(--transition);
         }
         .fs-next-time {
-            font-size: 0.8rem;
-            color: #aaa;
+            font-size: 0.78rem;
+            color: var(--text-secondary);
         }
         .fs-next-countdown {
-            font-size: 1.1rem;
-            font-weight: 700;
+            font-size: 1.05rem;
+            font-weight: 600;
             font-variant-numeric: tabular-nums;
-            color: #e6a800;
+            color: #c8a870;
+            transition: color var(--transition);
         }
 
         /* -- 概要 -- */
@@ -748,15 +1037,22 @@
             display: flex;
             justify-content: center;
             gap: 6vw;
-            font-size: 0.8rem;
-            color: #bbb;
+            font-size: 0.78rem;
+            color: var(--text-muted);
             letter-spacing: 1px;
             flex-shrink: 0;
+            transition: color var(--transition);
         }
         .fs-summary strong {
-            font-size: 1rem;
-            color: #dc3545;
-            font-weight: 700;
+            font-size: 0.95rem;
+            color: var(--text-accent);
+            font-weight: 600;
+            transition: color var(--transition);
+        }
+        .fs-total-hint {
+            font-size: 0.62rem;
+            color: var(--text-light);
+            letter-spacing: 1px;
         }
 
         .exam-card {
@@ -776,28 +1072,29 @@
 
         @media (max-width: 600px) {
             body { padding: 16px 10px; }
-            .header h1 { font-size: 1.6rem; letter-spacing: 2px; }
+            .header h1 { font-size: 1.5rem; letter-spacing: 2px; }
             .hero-countdown { padding: 16px 14px; }
-            .hero-countdown .timer .num { font-size: 1.6rem; min-width: 42px; padding: 3px 8px; }
-            .hero-countdown .timer .sep { font-size: 1.4rem; }
+            .hero-countdown .timer .num { font-size: 1.5rem; min-width: 40px; padding: 3px 8px; }
+            .hero-countdown .timer .sep { font-size: 1.3rem; }
             .current-exam { padding: 14px 16px; }
             .current-exam .ce-body .ce-name { font-size: 1rem; }
-            .current-exam .ce-body .ce-countdown-num { font-size: 1.1rem; }
+            .current-exam .ce-body .ce-countdown-num { font-size: 1.05rem; }
             .exam-card { padding: 10px 12px; gap: 4px; }
-            .exam-card .name { font-size: 0.88rem; min-width: 52px; }
+            .exam-card .name { font-size: 0.85rem; min-width: 50px; }
             .exam-card .countdown-mini { margin-left: 0; width: 100%; justify-content: flex-end; }
-            .exam-card .meta .time-range { font-size: 0.72rem; }
+            .exam-card .meta .time-range { font-size: 0.7rem; }
             .session-divider { margin: 8px 0 4px; }
-            .session-divider .label { font-size: 0.65rem; }
+            .session-divider .label { font-size: 0.62rem; }
             .fs-current-name { font-size: clamp(1.5rem, 5vh, 2.2rem); letter-spacing: 0.08em; }
             .fs-timer-digits .digit-block .num { font-size: clamp(1.8rem, 7vh, 3rem); }
-            .fs-timer-digits .digit-sep { font-size: clamp(1.2rem, 5vh, 2rem); padding-bottom: 0.8em; }
+            .fs-timer-digits .digit-sep { font-size: clamp(1.2rem, 5vh, 2rem); }
             .fs-inner { padding: 20px 5vw; }
-            .fs-header { font-size: 0.75rem; }
-            .fs-next { gap: 6px; padding: 8px 14px; font-size: 0.8rem; }
-            .fs-next-name { font-size: 0.85rem; }
-            .fs-summary { gap: 10vw; font-size: 0.7rem; }
-            .fs-toggle { bottom: 16px; right: 16px; padding: 8px 14px; font-size: 0.75rem; }
+            .fs-header { font-size: 0.72rem; }
+            .fs-next { gap: 6px; padding: 8px 14px; font-size: 0.78rem; }
+            .fs-next-name { font-size: 0.82rem; }
+            .fs-summary { gap: 10vw; font-size: 0.68rem; }
+            .action-bar { bottom: 16px; right: 16px; gap: 8px; }
+            .action-btn { padding: 8px 14px; font-size: 0.75rem; border-radius: var(--radius-sm); }
         }
     </style>
 </head>
@@ -852,6 +1149,26 @@
         </div>
     </div>
 
+    <!-- 选科标记 -->
+    <div class="subject-selector" id="subjectSelector">
+        <div class="ss-header">
+            <span class="ss-title">我的选科</span>
+            <span class="ss-hint">点击标记</span>
+        </div>
+        <div class="ss-row">
+            <span class="ss-label">首选</span>
+            <span class="ss-option" data-subject="历史">历史</span>
+            <span class="ss-option" data-subject="物理">物理</span>
+        </div>
+        <div class="ss-row">
+            <span class="ss-label">再选</span>
+            <span class="ss-option" data-subject="化学">化学</span>
+            <span class="ss-option" data-subject="地理">地理</span>
+            <span class="ss-option" data-subject="思想政治">思想政治</span>
+            <span class="ss-option" data-subject="生物学">生物学</span>
+        </div>
+    </div>
+
     <!-- 日程标题 -->
     <div class="section-title">考试日程</div>
 
@@ -861,8 +1178,13 @@
     <!-- 底部 -->
     <div class="footer">金榜题名 · 前程似锦</div>
 
-    <!-- 全屏模式切换 -->
-    <button class="fs-toggle" id="fsToggle" title="全屏显示">全屏</button>
+    <!-- 底部操作栏 -->
+    <div class="action-bar">
+        <button class="action-btn action-btn-secondary" id="themeToggle" title="切换主题">浅色</button>
+        <button class="action-btn action-btn-secondary" id="pipToggle" title="浮动小窗">小窗</button>
+        <button class="action-btn action-btn-secondary" id="installBtn" title="安装到桌面" style="display:none;">安装</button>
+        <button class="action-btn" id="fsToggle" title="全屏显示">全屏</button>
+    </div>
 
     <!-- ===== 全屏显示覆盖层 ===== -->
     <div class="fs-overlay" id="fsOverlay">
@@ -910,7 +1232,7 @@
 
             <div class="fs-summary" id="fsSummary">
                 <span>已完成 <strong id="fsDone">0</strong> 场</span>
-                <span>剩余 <strong id="fsRemain">0</strong> 场</span>
+                <span>剩余 <strong id="fsRemain">0</strong> 场 <span class="fs-total-hint" id="fsTotalHint"></span></span>
             </div>
         </div>
     </div>
@@ -963,6 +1285,159 @@
     }
     function getExamEnd(e) {
         return new Date(GAOKAO_YEAR, 5, e.date, e.end[0], e.end[1], 0);
+    }
+
+    // ============================================================
+    //  选科标记
+    // ============================================================
+
+    const SUBJECTS = {
+        primary: { label: '首选', options: ['历史', '物理'], max: 1 },
+        secondary: { label: '再选', options: ['化学', '地理', '思想政治', '生物学'], max: 2 },
+    };
+    const allSubjects = [...SUBJECTS.primary.options, ...SUBJECTS.secondary.options];
+
+    let selectedSubjects = [];
+
+    function loadSubjectSelection() {
+        try {
+            const saved = localStorage.getItem('gaokao_subjects');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                if (Array.isArray(parsed)) {
+                    selectedSubjects = parsed.filter(s => allSubjects.includes(s));
+                    return;
+                }
+            }
+        } catch (_) {}
+        selectedSubjects = [];
+    }
+
+    function saveSubjectSelection() {
+        try {
+            localStorage.setItem('gaokao_subjects', JSON.stringify(selectedSubjects));
+        } catch (_) {}
+    }
+
+    function isSubjectSelected(name) {
+        return selectedSubjects.includes(name);
+    }
+
+    function updateSelectorHint() {
+        const hint = document.querySelector('.ss-hint');
+        if (!hint) return;
+        const count = selectedSubjects.length;
+        if (count === 0) {
+            hint.textContent = '点击标记你的选科';
+        } else {
+            hint.textContent = `已选 ${count} 科`;
+        }
+    }
+
+    function initSubjectSelector() {
+        loadSubjectSelection();
+        const container = document.getElementById('subjectSelector');
+        if (!container) return;
+
+        const options = Array.from(container.querySelectorAll('.ss-option'));
+        options.forEach(el => {
+            const subject = el.dataset.subject;
+            if (isSubjectSelected(subject)) el.classList.add('active');
+
+            el.addEventListener('click', () => {
+                const group = SUBJECTS.primary.options.includes(subject) ? 'primary'
+                    : SUBJECTS.secondary.options.includes(subject) ? 'secondary' : null;
+                if (!group) return;
+
+                const isActive = el.classList.contains('active');
+
+                if (group === 'primary') {
+                    // 首选: 互斥单选
+                    if (isActive) {
+                        el.classList.remove('active');
+                        selectedSubjects = selectedSubjects.filter(s => s !== subject);
+                    } else {
+                        // 清除该组所有选中
+                        options.forEach(o => {
+                            if (SUBJECTS.primary.options.includes(o.dataset.subject)) {
+                                o.classList.remove('active');
+                            }
+                        });
+                        el.classList.add('active');
+                        selectedSubjects = selectedSubjects.filter(
+                            s => !SUBJECTS.primary.options.includes(s)
+                        );
+                        selectedSubjects.push(subject);
+                    }
+                } else {
+                    // 再选: 最多选 max 个
+                    if (isActive) {
+                        el.classList.remove('active');
+                        selectedSubjects = selectedSubjects.filter(s => s !== subject);
+                    } else {
+                        const currentCount = options.filter(o =>
+                            SUBJECTS.secondary.options.includes(o.dataset.subject) &&
+                            o.classList.contains('active')
+                        ).length;
+                        if (currentCount >= SUBJECTS.secondary.max) {
+                            // 超过上限时闪烁提示
+                            el.style.transition = 'none';
+                            el.style.borderColor = '#dc3545';
+                            el.style.color = '#dc3545';
+                            setTimeout(() => {
+                                el.style.transition = '';
+                                el.style.borderColor = '';
+                                el.style.color = '';
+                            }, 300);
+                            return;
+                        }
+                        el.classList.add('active');
+                        selectedSubjects.push(subject);
+                    }
+                }
+
+                saveSubjectSelection();
+                updateSelectorHint();
+                applySubjectHighlight();
+            });
+        });
+
+        updateSelectorHint();
+        applySubjectHighlight();
+    }
+
+    function applySubjectHighlight() {
+        const cards = document.querySelectorAll('.exam-card');
+        cards.forEach(card => {
+            card.classList.remove('subject-selected', 'subject-dimmed');
+            const oldBadge = card.querySelector('.sel-badge');
+            if (oldBadge) oldBadge.remove();
+
+            const nameEl = card.querySelector('.name');
+            if (!nameEl) return;
+            let cardName = nameEl.textContent.replace(/考试中.*$/, '').trim();
+
+            // 处理 "历史 / 物理" 这种组合科目
+            const parts = cardName.split('/').map(s => s.trim()).filter(Boolean);
+
+            const matched = parts.some(p => isSubjectSelected(p));
+            const isElective = parts.some(p => allSubjects.includes(p));
+            const hasSelection = selectedSubjects.length > 0;
+
+            if (matched) {
+                card.classList.add('subject-selected');
+                const badge = document.createElement('span');
+                badge.className = 'sel-badge';
+                badge.textContent = '已选';
+                card.querySelector('.countdown-mini').before(badge);
+            } else if (isElective && hasSelection) {
+                card.classList.add('subject-dimmed');
+                const badge = document.createElement('span');
+                badge.className = 'sel-badge';
+                badge.textContent = '未选';
+                card.querySelector('.countdown-mini').before(badge);
+            }
+        });
     }
 
     // ============================================================
@@ -1050,6 +1525,7 @@
     }
 
     render();
+    initSubjectSelector();
 
     // ============================================================
     //  更新所有倒计时
@@ -1160,6 +1636,9 @@
             }
         });
 
+        // 应用选科高亮
+        applySubjectHighlight();
+
         // --- 当前考试进程状态 ---
         const ceEl = document.getElementById('currentExam');
         const ceLabel = document.getElementById('ceLabel');
@@ -1171,9 +1650,10 @@
         const ceStart = document.getElementById('ceProgressStart');
         const ceEnd = document.getElementById('ceProgressEnd');
 
-        // 找到当前/下一场/上一场考试
+        // 找到当前/下一场/上一场考试（考虑选科）
         let current = null, next = null, lastDone = null;
         for (const ex of exams) {
+            if (selectedSubjects.length > 0 && !isExamRelevant(ex)) continue;
             const s = getExamStart(ex);
             const e = getExamEnd(ex);
             if (now >= s && now <= e) { current = ex; break; }
@@ -1265,6 +1745,290 @@
     setInterval(updateAll, 1000);
 
     // ============================================================
+    //  主题切换
+    // ============================================================
+
+    const themeToggle = document.getElementById('themeToggle');
+
+    function loadTheme() {
+        try {
+            const saved = localStorage.getItem('gaokao_theme');
+            if (saved === 'dark') {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                themeToggle.textContent = '深色';
+                return;
+            }
+        } catch (_) {}
+        document.documentElement.removeAttribute('data-theme');
+        themeToggle.textContent = '浅色';
+    }
+
+    function toggleTheme() {
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        if (isDark) {
+            document.documentElement.removeAttribute('data-theme');
+            themeToggle.textContent = '浅色';
+            try { localStorage.setItem('gaokao_theme', 'light'); } catch (_) {}
+        } else {
+            document.documentElement.setAttribute('data-theme', 'dark');
+            themeToggle.textContent = '深色';
+            try { localStorage.setItem('gaokao_theme', 'dark'); } catch (_) {}
+        }
+        // 全屏打开时同步更新
+        if (fsOverlay.classList.contains('open')) updateFullscreen();
+    }
+
+    themeToggle.addEventListener('click', toggleTheme);
+    loadTheme();
+
+    // ============================================================
+    //  PWA 安装提示
+    // ============================================================
+
+    let deferredPrompt = null;
+    const installBtn = document.getElementById('installBtn');
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        installBtn.style.display = '';
+    });
+
+    installBtn.addEventListener('click', async () => {
+        if (!deferredPrompt) return;
+        deferredPrompt.prompt();
+        const result = await deferredPrompt.userChoice;
+        if (result.outcome === 'accepted') {
+            installBtn.style.display = 'none';
+        }
+        deferredPrompt = null;
+    });
+
+    window.addEventListener('appinstalled', () => {
+        installBtn.style.display = 'none';
+        deferredPrompt = null;
+    });
+
+    // ============================================================
+    //  浮动小窗 (Picture-in-Picture)
+    // ============================================================
+
+    const pipBtn = document.getElementById('pipToggle');
+    let pipWindow = null;
+    let pipInterval = null;
+
+    function buildPipContent(doc, winW, winH) {
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        const bg = isDark ? '#1c1814' : '#f8f4ee';
+        const cardBg = isDark ? '#2a2420' : '#ffffff';
+        const textMain = isDark ? '#e8e0d8' : '#3a3228';
+        const textSec = isDark ? '#a09088' : '#a09080';
+        const accent = isDark ? '#d4a880' : '#c8946a';
+        const border = isDark ? '#3a342e' : '#e8e0d8';
+
+        // 根据窗口实际尺寸动态计算基准字号
+        const baseSize = Math.max(8, Math.min(winW, winH * 1.8) / 22);
+
+        doc.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width,initial-scale=1.0">
+            <style>
+                * { margin: 0; padding: 0; box-sizing: border-box; }
+                html, body {
+                    width: 100%; height: 100%;
+                    overflow: hidden;
+                }
+                body {
+                    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+                    background: ${bg};
+                    color: ${textMain};
+                    display: flex; flex-direction: column;
+                    justify-content: center; align-items: center;
+                    padding: ${baseSize * 0.4}px;
+                    user-select: none;
+                }
+                .pip-label {
+                    font-size: ${baseSize * 0.7}px;
+                    color: ${textSec};
+                    letter-spacing: 2px;
+                    margin-bottom: ${baseSize * 0.3}px;
+                    flex-shrink: 0;
+                    text-align: center;
+                    white-space: nowrap;
+                }
+                .pip-digits {
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    gap: ${baseSize * 0.12}px;
+                    font-variant-numeric: tabular-nums;
+                    width: 100%;
+                    flex-shrink: 0;
+                }
+                .pip-digits .block {
+                    flex: 1;
+                    text-align: center;
+                    min-width: 0;
+                }
+                .pip-digits .block .num {
+                    font-size: ${baseSize * 1.6}px;
+                    font-weight: 700;
+                    color: ${accent};
+                    line-height: 1.15;
+                }
+                .pip-digits .block .unit {
+                    font-size: ${baseSize * 0.5}px;
+                    color: ${textSec};
+                    margin-top: ${baseSize * 0.08}px;
+                }
+                .pip-digits .sep {
+                    font-size: ${baseSize * 1.2}px;
+                    font-weight: 300;
+                    color: ${textSec};
+                    flex-shrink: 0;
+                    width: ${baseSize * 0.3}px;
+                    text-align: center;
+                    padding-bottom: ${baseSize * 0.45}px;
+                }
+                .pip-next {
+                    margin-top: ${baseSize * 0.5}px;
+                    padding: ${baseSize * 0.3}px ${baseSize * 0.6}px;
+                    background: ${cardBg};
+                    border-radius: ${baseSize * 0.4}px;
+                    border: 1px solid ${border};
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    width: 100%;
+                    max-width: ${Math.min(winW - baseSize * 0.8, 340)}px;
+                    flex-shrink: 0;
+                    font-size: ${baseSize * 0.7}px;
+                }
+                .pip-next .label { color: ${textSec}; white-space: nowrap; }
+                .pip-next .name { color: ${textMain}; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 0 ${baseSize * 0.25}px; flex: 1; }
+                .pip-next .time { color: ${accent}; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+            </style>
+            </head>
+            <body>
+                <div class="pip-label" id="pipLabel">距 2027 年高考还有</div>
+                <div class="pip-digits">
+                    <div class="block"><div class="num" id="pipD">344</div><div class="unit">天</div></div>
+                    <span class="sep">:</span>
+                    <div class="block"><div class="num" id="pipH">23</div><div class="unit">时</div></div>
+                    <span class="sep">:</span>
+                    <div class="block"><div class="num" id="pipM">59</div><div class="unit">分</div></div>
+                    <span class="sep">:</span>
+                    <div class="block"><div class="num" id="pipS">58</div><div class="unit">秒</div></div>
+                </div>
+                <div class="pip-next">
+                    <span class="label">下一场</span>
+                    <span class="name" id="pipNext">语文</span>
+                    <span class="time" id="pipNextTime">344天</span>
+                </div>
+            </body>
+            </html>
+        `);
+        doc.close();
+    }
+
+    function updatePipContent() {
+        if (!pipWindow || pipWindow.closed) return;
+        const doc = pipWindow.document;
+        const now = new Date();
+
+        const gaokaoStart = new Date(GAOKAO_YEAR, 5, 7, 0, 0, 0);
+        const gaokaoEnd = new Date(GAOKAO_YEAR, 5, 10, 11, 0, 0);
+        let diff, label;
+        if (now >= gaokaoStart && now <= gaokaoEnd) {
+            diff = gaokaoEnd - now;
+            label = '距全部结束还有';
+        } else if (now < gaokaoStart) {
+            diff = gaokaoStart - now;
+            label = `距 ${GAOKAO_YEAR} 年高考还有`;
+        } else {
+            const nextStart = new Date(GAOKAO_YEAR + 1, 5, 7, 0, 0, 0);
+            diff = nextStart - now;
+            label = `距 ${GAOKAO_YEAR + 1} 年高考还有`;
+        }
+
+        const d = Math.floor(diff / 86400000);
+        const h = Math.floor((diff % 86400000) / 3600000);
+        const m = Math.floor((diff % 3600000) / 60000);
+        const s = Math.floor((diff % 60000) / 1000);
+
+        const elLabel = doc.getElementById('pipLabel');
+        const elD = doc.getElementById('pipD');
+        const elH = doc.getElementById('pipH');
+        const elM = doc.getElementById('pipM');
+        const elS = doc.getElementById('pipS');
+        if (elLabel) elLabel.textContent = label;
+        if (elD) elD.textContent = pad2(d);
+        if (elH) elH.textContent = pad2(h);
+        if (elM) elM.textContent = pad2(m);
+        if (elS) elS.textContent = pad2(s);
+
+        // 下一场
+        let nextName = '—', nextTime = '—';
+        for (const ex of exams) {
+            if (selectedSubjects.length > 0 && !isExamRelevant(ex)) continue;
+            const s = getExamStart(ex);
+            if (now < s) {
+                nextName = ex.name;
+                const diff2 = s - now;
+                const d2 = Math.floor(diff2 / 86400000);
+                const h2 = Math.floor((diff2 % 86400000) / 3600000);
+                const m2 = Math.floor((diff2 % 3600000) / 60000);
+                nextTime = d2 > 0 ? `${d2}天` : `${pad2(h2)}:${pad2(m2)}`;
+                break;
+            }
+        }
+        const elNext = doc.getElementById('pipNext');
+        const elNextTime = doc.getElementById('pipNextTime');
+        if (elNext) elNext.textContent = nextName;
+        if (elNextTime) elNextTime.textContent = nextTime;
+    }
+
+    pipBtn.addEventListener('click', async () => {
+        if (pipWindow && !pipWindow.closed) {
+            pipWindow.close();
+            clearInterval(pipInterval);
+            pipWindow = null;
+            pipInterval = null;
+            pipBtn.textContent = '小窗';
+            return;
+        }
+        if (!('documentPictureInPicture' in window)) {
+            pipBtn.textContent = '不支持';
+            setTimeout(() => { pipBtn.textContent = '小窗'; }, 1500);
+            return;
+        }
+        try {
+            const pipW = 360, pipH = 210;
+            pipWindow = await window.documentPictureInPicture.requestWindow({
+                width: pipW,
+                height: pipH,
+            });
+            pipBtn.textContent = '关闭';
+            pipWindow.document.title = '高考倒计时';
+            buildPipContent(pipWindow.document, pipW, pipH);
+            updatePipContent();
+            pipInterval = setInterval(updatePipContent, 1000);
+
+            pipWindow.addEventListener('pagehide', () => {
+                clearInterval(pipInterval);
+                pipWindow = null;
+                pipInterval = null;
+                pipBtn.textContent = '小窗';
+            });
+        } catch (e) {
+            // 用户取消或出错
+        }
+    });
+
+    // ============================================================
     //  全屏模式
     // ============================================================
 
@@ -1272,13 +2036,21 @@
     const fsToggle  = document.getElementById('fsToggle');
     const fsExit    = document.getElementById('fsExit');
 
+    function isExamRelevant(ex) {
+        if (selectedSubjects.length === 0) return true;
+        if (ex.tag !== 'elective') return true;
+        const parts = ex.name.split('/').map(s => s.trim());
+        return parts.some(p => selectedSubjects.includes(p));
+    }
+
     function updateFullscreen() {
         const now = new Date();
         const fsInner = document.querySelector('.fs-inner');
 
-        // 判断当前是否有考试在进行
+        // 判断当前是否有考试在进行（仅相关科目）
         let hasCurrent = false, curExam = null;
         for (const ex of exams) {
+            if (!isExamRelevant(ex)) continue;
             const s = getExamStart(ex), e = getExamEnd(ex);
             if (now >= s && now <= e) { hasCurrent = true; curExam = ex; break; }
         }
@@ -1328,6 +2100,7 @@
 
         let targetEnd = null;
         for (const ex of exams) {
+            if (!isExamRelevant(ex)) continue;
             const s = getExamStart(ex), e = getExamEnd(ex);
             if (now >= s && now <= e) { targetEnd = e; break; }
             if (now < s && !targetEnd) { targetEnd = s; break; }
@@ -1347,9 +2120,10 @@
             fsDm.textContent = '—'; fsDs.textContent = '—';
         }
 
-        // 下一场
+        // 下一场（仅相关科目）
         let nextName = '—', nextTime = '—', nextCountdown = '—';
         for (const ex of exams) {
+            if (!isExamRelevant(ex)) continue;
             const s = getExamStart(ex);
             if (now < s) {
                 nextName = ex.name;
@@ -1377,11 +2151,18 @@
             document.getElementById('fsNextCountdown').textContent = nextCountdown;
         }
 
-        // 进度统计
+        // 进度统计（仅相关科目）
+        const relevantExams = exams.filter(ex => isExamRelevant(ex));
         let doneCount = 0;
-        exams.forEach(ex => { if (now > getExamEnd(ex)) doneCount++; });
+        relevantExams.forEach(ex => { if (now > getExamEnd(ex)) doneCount++; });
         document.getElementById('fsDone').textContent   = doneCount;
-        document.getElementById('fsRemain').textContent = exams.length - doneCount;
+        document.getElementById('fsRemain').textContent = relevantExams.length - doneCount;
+        const fsHint = document.getElementById('fsTotalHint');
+        if (fsHint) {
+            fsHint.textContent = selectedSubjects.length > 0
+                ? '· 已选科'
+                : '· 全部科目';
+        }
     }
 
     function lockScroll(lock) {
@@ -1418,6 +2199,17 @@
     setInterval(() => {
         if (fsOverlay.classList.contains('open')) updateFullscreen();
     }, 1000);
+</script>
+
+<script>
+    // Service Worker 注册（需要 HTTPS 或 localhost）
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js').catch(() => {
+                // file:// 或老旧浏览器会失败，静默处理
+            });
+        });
+    }
 </script>
 
 </body>
