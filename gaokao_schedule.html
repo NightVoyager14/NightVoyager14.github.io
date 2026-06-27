@@ -1070,6 +1070,91 @@
         .exam-card:nth-child(9) { animation-delay: 0.18s; }
         .exam-card:nth-child(10) { animation-delay: 0.20s; }
 
+        /* ===== 骨架屏（绝对定位覆盖内容） ===== */
+        .skeleton {
+            position: absolute;
+            inset: 0;
+            z-index: 100;
+            pointer-events: none;
+            background: var(--bg);
+            transition: opacity 0.4s ease;
+        }
+        .skeleton .sk-header {
+            text-align: center;
+            margin-bottom: 28px;
+        }
+        .skeleton .sk-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            padding: 18px 22px;
+            margin-bottom: 18px;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border);
+        }
+        .skeleton .sk-row {
+            display: flex;
+            align-items: center;
+        }
+        .skeleton .sk-block {
+            border-radius: var(--radius-sm);
+            background: var(--border);
+        }
+        .skeleton .sk-line {
+            border-radius: 6px;
+            background: var(--border);
+        }
+        .skeleton .sk-bar {
+            width: 100%; height: 6px;
+            border-radius: 4px;
+            background: var(--border);
+        }
+        .skeleton .sk-pill {
+            width: 64px; height: 28px;
+            border-radius: var(--radius-full);
+            background: var(--border);
+        }
+
+        /* shimmer 动画 */
+        .skeleton .sk-block,
+        .skeleton .sk-line,
+        .skeleton .sk-bar,
+        .skeleton .sk-pill {
+            position: relative;
+            overflow: hidden;
+        }
+        .skeleton .sk-block::after,
+        .skeleton .sk-line::after,
+        .skeleton .sk-bar::after,
+        .skeleton .sk-pill::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg,
+                transparent 0%,
+                rgba(255,255,255,0.25) 50%,
+                transparent 100%);
+            animation: shimmer 1.6s ease-in-out infinite;
+            transform: translateX(-100%);
+        }
+        [data-theme="dark"] .skeleton .sk-block::after,
+        [data-theme="dark"] .skeleton .sk-line::after,
+        [data-theme="dark"] .skeleton .sk-bar::after,
+        [data-theme="dark"] .skeleton .sk-pill::after {
+            background: linear-gradient(90deg,
+                transparent 0%,
+                rgba(255,255,255,0.06) 50%,
+                transparent 100%);
+        }
+        @keyframes shimmer {
+            100% { transform: translateX(100%); }
+        }
+
+        /* 主内容始终可见，被骨架覆盖 */
+        .main-content {
+            position: relative;
+            z-index: 1;
+        }
+
         @media (max-width: 600px) {
             body { padding: 16px 10px; }
             .header h1 { font-size: 1.5rem; letter-spacing: 2px; }
@@ -1100,7 +1185,59 @@
 </head>
 <body>
 
-<div class="container">
+<div class="container" style="position:relative;">
+    <!-- ===== 骨架屏（绝对定位覆盖内容） ===== -->
+    <div class="skeleton" id="skeleton">
+        <div class="sk-header">
+            <div class="sk-line" style="width:160px;height:28px;margin:0 auto 8px;"></div>
+            <div class="sk-line" style="width:200px;height:16px;margin:0 auto;"></div>
+        </div>
+        <div class="sk-card">
+            <div class="sk-line" style="width:140px;height:14px;margin:0 auto 18px;"></div>
+            <div class="sk-row" style="justify-content:center;gap:8px;">
+                <div class="sk-block" style="width:64px;height:56px;"></div>
+                <div class="sk-line" style="width:12px;height:32px;margin-top:12px;"></div>
+                <div class="sk-block" style="width:64px;height:56px;"></div>
+                <div class="sk-line" style="width:12px;height:32px;margin-top:12px;"></div>
+                <div class="sk-block" style="width:64px;height:56px;"></div>
+                <div class="sk-line" style="width:12px;height:32px;margin-top:12px;"></div>
+                <div class="sk-block" style="width:64px;height:56px;"></div>
+            </div>
+        </div>
+        <div class="sk-card">
+            <div class="sk-row" style="justify-content:space-between;">
+                <div class="sk-line" style="width:80px;height:14px;"></div>
+                <div class="sk-line" style="width:60px;height:14px;"></div>
+            </div>
+            <div class="sk-row" style="justify-content:space-between;margin-top:14px;">
+                <div class="sk-line" style="width:100px;height:20px;"></div>
+                <div class="sk-line" style="width:120px;height:20px;"></div>
+            </div>
+            <div class="sk-bar" style="margin-top:14px;"></div>
+        </div>
+        <div class="sk-card">
+            <div class="sk-row" style="justify-content:space-between;margin-bottom:4px;">
+                <div class="sk-line" style="width:60px;height:18px;"></div>
+                <div class="sk-line" style="width:100px;height:14px;"></div>
+            </div>
+            <div class="sk-row" style="gap:8px;flex-wrap:wrap;">
+                <div class="sk-pill"></div>
+                <div class="sk-pill"></div>
+                <div class="sk-pill"></div>
+                <div class="sk-pill"></div>
+                <div class="sk-pill"></div>
+                <div class="sk-pill"></div>
+            </div>
+        </div>
+        <div class="sk-line" style="width:100px;height:14px;margin:0 auto 16px;"></div>
+        <div class="sk-card" style="height:52px;"></div>
+        <div class="sk-card" style="height:52px;"></div>
+        <div class="sk-card" style="height:52px;"></div>
+        <div class="sk-card" style="height:52px;"></div>
+    </div>
+
+    <!-- ===== 真实内容（始终在骨架下方） ===== -->
+    <div class="main-content" id="mainContent">
     <!-- 头部 -->
     <div class="header">
         <h1>四川高考倒计时</h1>
@@ -1177,6 +1314,7 @@
 
     <!-- 底部 -->
     <div class="footer">金榜题名 · 前程似锦</div>
+    </div><!-- /main-content -->
 
     <!-- 底部操作栏 -->
     <div class="action-bar">
@@ -1279,13 +1417,17 @@
     const dateLabels = {};
     [7, 8, 9, 10].forEach(d => { dateLabels[d] = `6月${d}日 · ${getWeekDay(d)}`; });
 
-    // 为每科生成 Date 对象
-    function getExamStart(e) {
-        return new Date(GAOKAO_YEAR, 5, e.date, e.start[0], e.start[1], 0);
-    }
-    function getExamEnd(e) {
-        return new Date(GAOKAO_YEAR, 5, e.date, e.end[0], e.end[1], 0);
-    }
+    // 为每科生成 Date 对象（预计算，避免每秒重复创建）
+    const examDates = exams.map(ex => ({
+        start: new Date(GAOKAO_YEAR, 5, ex.date, ex.start[0], ex.start[1], 0),
+        end:   new Date(GAOKAO_YEAR, 5, ex.date, ex.end[0], ex.end[1], 0),
+    }));
+    function getExamStart(e) { return examDates[exams.indexOf(e)].start; }
+    function getExamEnd(e)   { return examDates[exams.indexOf(e)].end; }
+
+    // 预计算高考起止时间
+    const gaokaoStart = new Date(GAOKAO_YEAR, 5, 7, 0, 0, 0);
+    const gaokaoEnd   = new Date(GAOKAO_YEAR, 5, 10, 11, 0, 0);
 
     // ============================================================
     //  选科标记
@@ -1406,22 +1548,61 @@
         applySubjectHighlight();
     }
 
+    // ============================================================
+    //  DOM 引用缓存
+    // ============================================================
+
+    const dom = {};
+    const cardEls = [];
+    const selCards = [];
+
+    function cacheDom() {
+        const ids = [
+            'heroSection','heroLabel','statusMsg','yearBadge',
+            'hDays','hHours','hMins','hSecs',
+            'currentExam','ceLabel','ceBadge','ceName','ceTime',
+            'ceCountdown','ceProgressFill','ceProgressStart','ceProgressEnd',
+            'fsCurName','fsCurTime','fsProgressFill','fsProgStart','fsProgEnd',
+            'fsCurLabel','fsDd','fsDh','fsDm','fsDs',
+            'fsNextName','fsNextTime','fsNextCountdown',
+            'fsDone','fsRemain','fsTotalHint',
+            'fsStatusBar','fsStatusText','fsNext',
+        ];
+        ids.forEach(id => { dom[id] = document.getElementById(id); });
+        dom.fsInner = document.querySelector('.fs-inner');
+        dom.fsStatusDot = document.querySelector('.fs-status-dot');
+        dom.skeleton = document.getElementById('skeleton');
+
+        exams.forEach(ex => {
+            const key = `${ex.date}-${ex.name.replace(/[\/\s]/g,'')}`;
+            const card = document.getElementById(`card-${key}`);
+            cardEls.push({
+                card,
+                d: document.getElementById(`cd-d-${key}`),
+                h: document.getElementById(`cd-h-${key}`),
+                m: document.getElementById(`cd-m-${key}`),
+                s: document.getElementById(`cd-s-${key}`),
+            });
+            selCards.push({
+                card,
+                nameEl: card?.querySelector('.name'),
+                countdownEl: card?.querySelector('.countdown-mini'),
+                parts: key.includes('历史') || key.includes('物理')
+                    ? ['历史', '物理']
+                    : [ex.name],
+                isElective: ex.tag === 'elective',
+            });
+        });
+    }
+
     function applySubjectHighlight() {
-        const cards = document.querySelectorAll('.exam-card');
-        cards.forEach(card => {
+        selCards.forEach(({ card, nameEl, countdownEl, parts, isElective }) => {
+            if (!card || !nameEl) return;
             card.classList.remove('subject-selected', 'subject-dimmed');
             const oldBadge = card.querySelector('.sel-badge');
             if (oldBadge) oldBadge.remove();
 
-            const nameEl = card.querySelector('.name');
-            if (!nameEl) return;
-            let cardName = nameEl.textContent.replace(/考试中.*$/, '').trim();
-
-            // 处理 "历史 / 物理" 这种组合科目
-            const parts = cardName.split('/').map(s => s.trim()).filter(Boolean);
-
             const matched = parts.some(p => isSubjectSelected(p));
-            const isElective = parts.some(p => allSubjects.includes(p));
             const hasSelection = selectedSubjects.length > 0;
 
             if (matched) {
@@ -1429,13 +1610,13 @@
                 const badge = document.createElement('span');
                 badge.className = 'sel-badge';
                 badge.textContent = '已选';
-                card.querySelector('.countdown-mini').before(badge);
+                if (countdownEl) countdownEl.before(badge);
             } else if (isElective && hasSelection) {
                 card.classList.add('subject-dimmed');
                 const badge = document.createElement('span');
                 badge.className = 'sel-badge';
                 badge.textContent = '未选';
-                card.querySelector('.countdown-mini').before(badge);
+                if (countdownEl) countdownEl.before(badge);
             }
         });
     }
@@ -1524,40 +1705,52 @@
         root.appendChild(hint);
     }
 
+    // 渲染页面 + 初始化选科
     render();
     initSubjectSelector();
+
+    // 缓存 DOM（此时卡片已存在）
+    cacheDom();
+
+    // 骨架屏淡出
+    requestAnimationFrame(() => {
+        const sk = dom.skeleton;
+        if (sk) {
+            sk.style.transition = 'opacity 0.4s ease';
+            sk.style.opacity = '0';
+            sk.addEventListener('transitionend', () => sk.remove());
+        }
+    });
 
     // ============================================================
     //  更新所有倒计时
     // ============================================================
 
-    function updateAll() {
+    let lastTick = 0;
+    let lastSelectionSnapshot = '';
+
+    function updateAll(force) {
         const now = new Date();
 
         // --- 总体倒计时 ---
-        const gaokaoStart = new Date(GAOKAO_YEAR, 5, 7, 0, 0, 0);
-        const gaokaoEnd   = new Date(GAOKAO_YEAR, 5, 10, 11, 0, 0); // 最后一科结束
-        const heroSection = document.getElementById('heroSection');
-        const heroLabel   = document.getElementById('heroLabel');
-        const statusMsg   = document.getElementById('statusMsg');
-        const yearBadge   = document.getElementById('yearBadge');
+        const heroLabel = dom.heroLabel;
+        const yearBadge = dom.yearBadge;
+        const heroSection = dom.heroSection;
+        const statusMsg = dom.statusMsg;
 
         yearBadge.textContent = GAOKAO_YEAR;
 
         if (now >= gaokaoStart && now <= gaokaoEnd) {
-            // 高考进行中
             const diff = gaokaoEnd - now;
             setHero(diff, '距全部结束还有');
             heroSection.classList.add('ongoing');
             statusMsg.classList.add('show');
         } else if (now < gaokaoStart) {
-            // 高考尚未开始
             const diff = gaokaoStart - now;
             setHero(diff, `距 ${GAOKAO_YEAR} 年高考还有`);
             heroSection.classList.remove('ongoing');
             statusMsg.classList.remove('show');
         } else {
-            // 高考已结束
             const nextStart = new Date(GAOKAO_YEAR + 1, 5, 7, 0, 0, 0);
             const diff = nextStart - now;
             setHero(diff, `距 ${GAOKAO_YEAR + 1} 年高考还有`);
@@ -1565,55 +1758,52 @@
             statusMsg.classList.remove('show');
         }
 
-        // --- 每科倒计时 ---
-        exams.forEach(ex => {
+        // --- 每科倒计时（使用缓存 DOM） ---
+        exams.forEach((ex, i) => {
+            const el = cardEls[i];
+            if (!el || !el.d) return;
+            const { card, d: dEl, h: hEl, m: mEl, s: sEl } = el;
             const start = getExamStart(ex);
             const end   = getExamEnd(ex);
-            const key = `${ex.date}-${ex.name.replace(/[\/\s]/g,'')}`;
-            const card = document.getElementById(`card-${key}`);
-
-            const dEl = document.getElementById(`cd-d-${key}`);
-            const hEl = document.getElementById(`cd-h-${key}`);
-            const mEl = document.getElementById(`cd-m-${key}`);
-            const sEl = document.getElementById(`cd-s-${key}`);
-
-            if (!dEl) return;
 
             // 清除状态
+            const wasDone = card.classList.contains('exam-done');
+            const wasNow  = card.classList.contains('exam-now');
             card.classList.remove('exam-now', 'exam-done');
-            const oldBadge = card.querySelector('.exam-done-badge');
-            if (oldBadge) oldBadge.remove();
 
             if (now < start) {
-                // 尚未开始 → 倒计时
+                // 尚未开始
                 const diff = start - now;
-                const d = Math.floor(diff / 86400000);
-                const h = Math.floor((diff % 86400000) / 3600000);
-                const m = Math.floor((diff % 3600000) / 60000);
-                const s = Math.floor((diff % 60000) / 1000);
-                dEl.textContent = pad2(d);
-                hEl.textContent = pad2(h);
-                mEl.textContent = pad2(m);
-                sEl.textContent = pad2(s);
+                dEl.textContent = pad2(Math.floor(diff / 86400000));
+                hEl.textContent = pad2(Math.floor((diff % 86400000) / 3600000));
+                mEl.textContent = pad2(Math.floor((diff % 3600000) / 60000));
+                sEl.textContent = pad2(Math.floor((diff % 60000) / 1000));
+
+                // 清除 done badge（如果之前是已完成状态）
+                if (wasDone) {
+                    const b = card.querySelector('.exam-done-badge');
+                    if (b) b.remove();
+                }
             } else if (now >= start && now <= end) {
                 // 正在考试
                 card.classList.add('exam-now');
                 const diff = end - now;
-                const h = Math.floor(diff / 3600000);
-                const m = Math.floor((diff % 3600000) / 60000);
-                const s = Math.floor((diff % 60000) / 1000);
                 dEl.textContent = '00';
-                hEl.textContent = pad2(h);
-                mEl.textContent = pad2(m);
-                sEl.textContent = pad2(s);
+                hEl.textContent = pad2(Math.floor(diff / 3600000));
+                mEl.textContent = pad2(Math.floor((diff % 3600000) / 60000));
+                sEl.textContent = pad2(Math.floor((diff % 60000) / 1000));
 
-                // 在科目名后加"考试中"徽章
-                let badge = card.querySelector('.exam-badge');
-                if (!badge) {
-                    badge = document.createElement('span');
-                    badge.className = 'exam-badge';
-                    badge.textContent = '考试中';
-                    card.querySelector('.name').appendChild(badge);
+                if (!wasNow) {
+                    // 状态切换时才操作 DOM
+                    let badge = card.querySelector('.exam-badge');
+                    if (!badge) {
+                        badge = document.createElement('span');
+                        badge.className = 'exam-badge';
+                        badge.textContent = '考试中';
+                        card.querySelector('.name').appendChild(badge);
+                    }
+                    const doneBadge = card.querySelector('.exam-done-badge');
+                    if (doneBadge) doneBadge.remove();
                 }
             } else {
                 // 已结束
@@ -1622,33 +1812,39 @@
                 hEl.textContent = '';
                 mEl.textContent = '';
                 sEl.textContent = '';
-                // 显示"已完成"徽章
-                let doneBadge = card.querySelector('.exam-done-badge');
-                if (!doneBadge) {
-                    doneBadge = document.createElement('span');
-                    doneBadge.className = 'exam-done-badge';
-                    doneBadge.textContent = '已完成';
-                    card.querySelector('.countdown-mini').appendChild(doneBadge);
+
+                if (!wasDone) {
+                    // 状态切换时才操作 DOM
+                    let doneBadge = card.querySelector('.exam-done-badge');
+                    if (!doneBadge) {
+                        doneBadge = document.createElement('span');
+                        doneBadge.className = 'exam-done-badge';
+                        doneBadge.textContent = '已完成';
+                        card.querySelector('.countdown-mini').appendChild(doneBadge);
+                    }
+                    const badge = card.querySelector('.exam-badge');
+                    if (badge) badge.remove();
                 }
-                // 清除"考试中" badge
-                const badge = card.querySelector('.exam-badge');
-                if (badge) badge.remove();
             }
         });
 
-        // 应用选科高亮
-        applySubjectHighlight();
+        // 选科高亮（仅在选中状态变化时更新）
+        const snap = selectedSubjects.sort().join(',');
+        if (force || snap !== lastSelectionSnapshot) {
+            lastSelectionSnapshot = snap;
+            applySubjectHighlight();
+        }
 
         // --- 当前考试进程状态 ---
-        const ceEl = document.getElementById('currentExam');
-        const ceLabel = document.getElementById('ceLabel');
-        const ceBadge = document.getElementById('ceBadge');
-        const ceName = document.getElementById('ceName');
-        const ceTime = document.getElementById('ceTime');
-        const ceCountdown = document.getElementById('ceCountdown');
-        const ceFill = document.getElementById('ceProgressFill');
-        const ceStart = document.getElementById('ceProgressStart');
-        const ceEnd = document.getElementById('ceProgressEnd');
+        const ceEl = dom.currentExam;
+        const ceLabel = dom.ceLabel;
+        const ceBadge = dom.ceBadge;
+        const ceName = dom.ceName;
+        const ceTime = dom.ceTime;
+        const ceCountdown = dom.ceCountdown;
+        const ceFill = dom.ceProgressFill;
+        const ceStart = dom.ceProgressStart;
+        const ceEnd = dom.ceProgressEnd;
 
         // 找到当前/下一场/上一场考试（考虑选科）
         let current = null, next = null, lastDone = null;
@@ -1734,15 +1930,25 @@
         const m = Math.floor((diff % 3600000) / 60000);
         const s = Math.floor((diff % 60000) / 1000);
 
-        document.getElementById('hDays').textContent   = pad2(d);
-        document.getElementById('hHours').textContent  = pad2(h);
-        document.getElementById('hMins').textContent   = pad2(m);
-        document.getElementById('hSecs').textContent   = pad2(s);
-        document.getElementById('heroLabel').textContent = label;
+        dom.hDays.textContent   = pad2(d);
+        dom.hHours.textContent  = pad2(h);
+        dom.hMins.textContent   = pad2(m);
+        dom.hSecs.textContent   = pad2(s);
+        heroLabel.textContent   = label;
     }
 
-    updateAll();
-    setInterval(updateAll, 1000);
+    // 首次渲染
+    updateAll(true);
+
+    // 使用 requestAnimationFrame 驱动更新，每秒最多执行一次
+    function tickLoop(time) {
+        if (time - lastTick >= 1000) {
+            lastTick = time;
+            updateAll();
+        }
+        requestAnimationFrame(tickLoop);
+    }
+    requestAnimationFrame(tickLoop);
 
     // ============================================================
     //  主题切换
