@@ -3,7 +3,8 @@
 const CACHE = 'gaokao-cache-v1';
 
 const ASSETS = [
-  './gaokao_schedule.html',
+  './index.html',
+  './gaokao.js',
   './manifest.json',
 ];
 

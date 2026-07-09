@@ -2,7 +2,7 @@
   "name": "四川高考倒计时 · 3+1+2",
   "short_name": "高考倒计时",
   "description": "四川 3+1+2 新高考倒计时与日程，支持选科标记、深色模式、全屏显示",
-  "start_url": "./gaokao_schedule.html",
+  "start_url": "./index.html",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#f8f4ee",

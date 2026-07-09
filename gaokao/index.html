@@ -1155,6 +1155,488 @@
             z-index: 1;
         }
 
+        /* ===== v2.0.0 阶段导航 ===== */
+        .phase-nav {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 20px;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            padding: 4px;
+            background: var(--bg-card);
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+            transition: background var(--transition), border var(--transition);
+        }
+        .phase-nav::-webkit-scrollbar { display: none; }
+
+        /* ===== 全局滚动条美化 ===== */
+        ::-webkit-scrollbar {
+            width: 5px;
+            height: 5px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+            transition: background var(--transition);
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
+        }
+        html {
+            scrollbar-width: thin;
+            scrollbar-color: var(--border) transparent;
+        }
+
+        .settings-modal::-webkit-scrollbar {
+            width: 4px;
+        }
+        .settings-modal::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 2px;
+        }
+
+        .phase-tab {
+            flex: 1;
+            min-width: 56px;
+            padding: 10px 6px;
+            border: none;
+            border-radius: var(--radius-sm);
+            background: transparent;
+            color: var(--text-secondary);
+            font-size: 0.82rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all var(--transition);
+            font-family: inherit;
+            letter-spacing: 1px;
+            text-align: center;
+            line-height: 1.2;
+            position: relative;
+            white-space: nowrap;
+        }
+        .phase-tab:hover {
+            background: var(--bg-soft);
+            color: var(--text-primary);
+        }
+        .phase-tab.active {
+            background: var(--text-accent);
+            color: var(--text-on-accent);
+            box-shadow: var(--shadow-btn);
+        }
+        .phase-tab .pt-sub {
+            font-size: 0.55rem;
+            opacity: 0.7;
+            display: block;
+            margin-top: 2px;
+            font-weight: 400;
+            letter-spacing: 0;
+        }
+        .phase-tab .pt-badge {
+            display: none;
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            font-size: 0.5rem;
+            font-weight: 700;
+        }
+        .phase-tab.done { opacity: 0.6; }
+        .phase-tab.done .pt-badge {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 16px;
+            height: 16px;
+            background: var(--text-muted);
+            color: var(--bg-card);
+            border-radius: 50%;
+        }
+
+        /* ===== 阶段详情 ===== */
+        .gaokao-content { display: block; }
+        .gaokao-content.hidden { display: none; }
+
+        .phase-detail {
+            display: none;
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            padding: 32px 24px;
+            margin-bottom: 20px;
+            text-align: center;
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--border);
+            animation: fadeUp 0.3s ease;
+            transition: background var(--transition), border var(--transition);
+        }
+        .phase-detail.show { display: block; }
+
+        .pd-header { margin-bottom: 20px; }
+        .pd-name {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: 4px;
+            margin-bottom: 6px;
+            transition: color var(--transition);
+        }
+        .pd-date-range {
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            letter-spacing: 1px;
+            transition: color var(--transition);
+        }
+        .pd-status-wrap {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        .pd-status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 18px;
+            border-radius: var(--radius-full);
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 2px;
+        }
+        .pd-status-badge.upcoming {
+            background: #f0ece4;
+            color: #b89860;
+        }
+        [data-theme="dark"] .pd-status-badge.upcoming {
+            background: #322c24;
+            color: #c8a870;
+        }
+        .pd-status-badge.ongoing {
+            background: var(--bg-soft);
+            color: var(--text-accent);
+        }
+        .pd-status-badge.ongoing::before {
+            content: '';
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: var(--text-accent);
+            animation: pulseDot 1.2s ease-in-out infinite;
+        }
+        .pd-status-badge.done {
+            background: #eaf2ea;
+            color: #689868;
+        }
+        [data-theme="dark"] .pd-status-badge.done {
+            background: #283828;
+            color: #78b078;
+        }
+        .pd-countdown { margin: 16px 0 8px; }
+        .pd-countdown .pd-timer {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 6px;
+        }
+        .pd-countdown .pd-timer .num {
+            font-size: 2.8rem;
+            font-weight: 700;
+            color: var(--text-hero);
+            background: var(--bg-soft);
+            border-radius: var(--radius-sm);
+            padding: 6px 14px;
+            min-width: 60px;
+            text-align: center;
+            font-variant-numeric: tabular-nums;
+            line-height: 1.3;
+            transition: background var(--transition), color var(--transition);
+        }
+        .pd-countdown .pd-timer .sep {
+            font-size: 2rem;
+            font-weight: 300;
+            color: var(--text-light);
+            transition: color var(--transition);
+        }
+        .pd-countdown .pd-timer .unit {
+            font-size: 0.62rem;
+            color: var(--text-muted);
+            display: block;
+            margin-top: 3px;
+        }
+        .pd-desc {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-top: 14px;
+            letter-spacing: 1px;
+        }
+
+        /* ===== 设置弹窗 ===== */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 20000;
+            background: rgba(0,0,0,0.4);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .modal-overlay.open { display: flex; animation: fadeUp 0.2s ease; }
+
+        .settings-modal {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            padding: 28px 24px;
+            max-width: 520px;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow-lg);
+            border: 1px solid var(--border);
+            animation: fadeUp 0.25s ease;
+            transition: background var(--transition), border var(--transition);
+        }
+        .sm-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: 2px;
+            margin-bottom: 20px;
+            text-align: center;
+            transition: color var(--transition);
+        }
+        .sm-sub {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            text-align: center;
+            margin-bottom: 20px;
+            letter-spacing: 1px;
+        }
+        .sm-phase {
+            margin-bottom: 16px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+            transition: border-color var(--transition);
+        }
+        .sm-phase:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+        .sm-phase-name {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+            transition: color var(--transition);
+        }
+        /* ===== 自定义日期选择器 ===== */
+        .dp-trigger {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 12px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: all var(--transition);
+            user-select: none;
+            min-width: 0;
+            flex: 1;
+        }
+        .dp-trigger:hover {
+            border-color: var(--text-muted);
+        }
+        .dp-trigger.active {
+            border-color: var(--text-accent);
+            box-shadow: 0 0 0 2px rgba(200,148,106,0.15);
+        }
+        .dp-label {
+            font-size: 0.72rem;
+            color: var(--text-secondary);
+            flex-shrink: 0;
+            min-width: 2.5em;
+        }
+        .dp-value {
+            flex: 1;
+            font-size: 0.82rem;
+            color: var(--text-primary);
+            font-weight: 500;
+            letter-spacing: 1px;
+            font-variant-numeric: tabular-nums;
+            transition: color var(--transition);
+        }
+        .dp-arrow {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            transition: transform var(--transition);
+            flex-shrink: 0;
+        }
+        .dp-trigger.active .dp-arrow {
+            transform: rotate(180deg);
+        }
+
+        /* ---- 日历弹出 ---- */
+        .cal-popup {
+            display: none;
+            position: fixed;
+            z-index: 30000;
+            background: var(--bg-card);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-lg);
+            border: 1px solid var(--border);
+            padding: 16px;
+            width: 272px;
+            animation: fadeUp 0.15s ease;
+            transition: background var(--transition), border var(--transition);
+        }
+        .cal-popup.open { display: block; }
+
+        .cal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .cal-nav {
+            width: 30px;
+            height: 30px;
+            border: none;
+            border-radius: var(--radius-sm);
+            background: var(--bg-soft);
+            color: var(--text-secondary);
+            font-size: 1.05rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all var(--transition);
+            font-family: inherit;
+            line-height: 1;
+        }
+        .cal-nav:hover {
+            background: var(--border);
+            color: var(--text-primary);
+        }
+        .cal-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            letter-spacing: 2px;
+            transition: color var(--transition);
+        }
+
+        .cal-weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            text-align: center;
+            gap: 2px;
+            margin-bottom: 6px;
+        }
+        .cal-weekdays span {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            padding: 4px 0;
+            font-weight: 500;
+        }
+        .cal-weekdays span:last-child,
+        .cal-weekdays span:nth-child(6) {
+            color: var(--text-light);
+        }
+
+        .cal-days {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 2px;
+        }
+        .cal-day {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.78rem;
+            color: var(--text-primary);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: all var(--transition);
+            border: none;
+            background: transparent;
+            font-family: inherit;
+            font-weight: 400;
+            line-height: 1;
+        }
+        .cal-day:hover {
+            background: var(--bg-soft);
+        }
+        .cal-day.other-month {
+            color: var(--text-light);
+        }
+        .cal-day.today {
+            border: 1px solid var(--text-accent);
+            font-weight: 600;
+        }
+        .cal-day.selected {
+            background: var(--text-accent);
+            color: var(--text-on-accent);
+            font-weight: 600;
+        }
+        .cal-day.selected:hover {
+            background: var(--text-accent);
+            opacity: 0.9;
+        }
+        .sm-reset-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 12px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: transparent;
+            color: var(--text-muted);
+            font-size: 0.68rem;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all var(--transition);
+        }
+        .sm-reset-btn:hover {
+            border-color: var(--text-muted);
+            color: var(--text-secondary);
+        }
+        .sm-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        .sm-btn {
+            padding: 8px 24px;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-size: 0.82rem;
+            font-weight: 500;
+            cursor: pointer;
+            font-family: inherit;
+            letter-spacing: 1px;
+            transition: all var(--transition);
+            line-height: 1.2;
+        }
+        .sm-btn-primary {
+            background: var(--text-accent);
+            color: var(--text-on-accent);
+        }
+        .sm-btn-primary:hover {
+            box-shadow: var(--shadow-btn);
+        }
+        .sm-btn-secondary {
+            background: var(--bg-soft);
+            color: var(--text-secondary);
+        }
+        .sm-btn-secondary:hover {
+            background: var(--border);
+        }
+
         @media (max-width: 600px) {
             body { padding: 16px 10px; }
             .header h1 { font-size: 1.5rem; letter-spacing: 2px; }
@@ -1170,6 +1652,12 @@
             .exam-card .meta .time-range { font-size: 0.7rem; }
             .session-divider { margin: 8px 0 4px; }
             .session-divider .label { font-size: 0.62rem; }
+            .phase-nav { padding: 3px; gap: 4px; }
+            .phase-tab { font-size: 0.72rem; padding: 8px 4px; min-width: 44px; }
+            .phase-tab .pt-sub { font-size: 0.5rem; }
+            .pd-name { font-size: 1.4rem; }
+            .pd-countdown .pd-timer .num { font-size: 2rem; min-width: 44px; padding: 4px 10px; }
+            .pd-countdown .pd-timer .sep { font-size: 1.4rem; }
             .fs-current-name { font-size: clamp(1.5rem, 5vh, 2.2rem); letter-spacing: 0.08em; }
             .fs-timer-digits .digit-block .num { font-size: clamp(1.8rem, 7vh, 3rem); }
             .fs-timer-digits .digit-sep { font-size: clamp(1.2rem, 5vh, 2rem); }
@@ -1180,6 +1668,9 @@
             .fs-summary { gap: 10vw; font-size: 0.68rem; }
             .action-bar { bottom: 16px; right: 16px; gap: 8px; }
             .action-btn { padding: 8px 14px; font-size: 0.75rem; border-radius: var(--radius-sm); }
+            .settings-modal { padding: 20px 16px; }
+            .sm-date-row { flex-direction: column; align-items: stretch; }
+            .dp-trigger { flex: none; width: 100%; }
         }
     </style>
 </head>
@@ -1242,10 +1733,13 @@
     <div class="header">
         <h1>四川高考倒计时</h1>
         <div class="sub">
-            <span>3+1+2 新高考 · <strong style="color:#dc3545;">四川</strong></span>
-            <span class="badge" id="yearBadge">2026</span>
+            <span>3+1+2 新高考 · 四川</span>
+            <span class="badge" id="yearBadge">2027届</span>
         </div>
     </div>
+
+    <!-- ===== v2.0.0 阶段导航 ===== -->
+    <div class="phase-nav" id="phaseNav"></div>
 
     <!-- 状态横幅 -->
     <div class="status-msg" id="statusMsg">高考进行中 · 沉着冷静</div>
@@ -1264,6 +1758,31 @@
         </div>
     </div>
 
+    <!-- ===== v2.0.0 阶段详情（非高考） ===== -->
+    <div class="phase-detail" id="phaseDetail">
+        <div class="pd-header">
+            <div class="pd-name" id="pdName">一诊</div>
+            <div class="pd-date-range" id="pdDateRange">2026年12月22日 - 12月24日</div>
+        </div>
+        <div class="pd-status-wrap">
+            <span class="pd-status-badge" id="pdBadge">即将开始</span>
+        </div>
+        <div class="pd-countdown">
+            <div class="pd-timer">
+                <div><span class="num" id="pdDays">--</span><span class="unit">天</span></div>
+                <span class="sep">:</span>
+                <div><span class="num" id="pdHours">--</span><span class="unit">时</span></div>
+                <span class="sep">:</span>
+                <div><span class="num" id="pdMins">--</span><span class="unit">分</span></div>
+                <span class="sep">:</span>
+                <div><span class="num" id="pdSecs">--</span><span class="unit">秒</span></div>
+            </div>
+        </div>
+        <div class="pd-desc" id="pdDesc">距开考还有</div>
+    </div>
+
+    <!-- ===== 高考内容 ===== -->
+    <div class="gaokao-content" id="gaokaoContent">
     <!-- 当前考试进程 -->
     <div class="current-exam" id="currentExam">
         <div class="ce-header">
@@ -1311,9 +1830,13 @@
 
     <!-- 日程容器 -->
     <div id="scheduleRoot"></div>
+    </div><!-- /gaokaoContent -->
 
     <!-- 底部 -->
-    <div class="footer">金榜题名 · 前程似锦</div>
+    <div class="footer">
+        <span>金榜题名 · 前程似锦</span>
+        <span style="display:block;font-size:0.58rem;color:var(--text-light);letter-spacing:1px;margin-top:6px;font-weight:400;">v2.0.2</span>
+    </div>
     </div><!-- /main-content -->
 
     <!-- 底部操作栏 -->
@@ -1321,6 +1844,7 @@
         <button class="action-btn action-btn-secondary" id="themeToggle" title="切换主题">浅色</button>
         <button class="action-btn action-btn-secondary" id="pipToggle" title="浮动小窗">小窗</button>
         <button class="action-btn action-btn-secondary" id="installBtn" title="安装到桌面" style="display:none;">安装</button>
+        <button class="action-btn action-btn-secondary" id="settingsBtn" title="考试日程设置">设置</button>
         <button class="action-btn" id="fsToggle" title="全屏显示">全屏</button>
     </div>
 
@@ -1374,1049 +1898,35 @@
             </div>
         </div>
     </div>
+
+    <!-- ===== v2.0.0 设置弹窗 ===== -->
+    <div class="modal-overlay" id="settingsModal">
+        <div class="settings-modal">
+            <div class="sm-title">考试日程设置</div>
+            <div class="sm-sub">自定义各阶段考试起止日期</div>
+            <div id="settingsForm"></div>
+            <div class="sm-actions">
+                <button class="sm-btn sm-btn-secondary" id="settingsCancel">取消</button>
+                <button class="sm-btn sm-btn-primary" id="settingsSave">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== v2.0.0 日历弹出框 ===== -->
+    <div class="cal-popup" id="calPopup">
+        <div class="cal-header">
+            <button class="cal-nav" id="calPrev">‹</button>
+            <span class="cal-title" id="calTitle">2026年 7月</span>
+            <button class="cal-nav" id="calNext">›</button>
+        </div>
+        <div class="cal-weekdays">
+            <span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span>
+        </div>
+        <div class="cal-days" id="calDays"></div>
+    </div>
 </div>
 
-<script>
-    // ============================================================
-    //  四川 3+1+2 新高考 · 考试数据
-    // ============================================================
-
-    const GAOKAO_YEAR = (() => {
-        const now = new Date();
-        const y = now.getFullYear();
-        const end = new Date(y, 5, 10, 11, 0, 0);
-        return now > end ? y + 1 : y;
-    })();
-
-    // 考试配置
-    const exams = [
-        // 6月7日
-        { date: 7, start: [9,0],  end: [11,30], name: '语文',         tag: 'mandatory' },
-        { date: 7, start: [15,0], end: [17,0],  name: '数学',         tag: 'mandatory' },
-        // 6月8日
-        { date: 8, start: [9,0],  end: [10,15], name: '历史 / 物理',  tag: 'elective' },
-        { date: 8, start: [15,0], end: [17,0],  name: '外语',         tag: 'mandatory' },
-        // 6月9日
-        { date: 9, start: [8,30], end: [9,45],  name: '化学',         tag: 'elective' },
-        { date: 9, start: [11,0], end: [12,15], name: '地理',         tag: 'elective' },
-        { date: 9, start: [14,30],end: [15,45], name: '思想政治',     tag: 'elective' },
-        { date: 9, start: [17,0], end: [18,15], name: '生物学',       tag: 'elective' },
-        // 6月10日
-        { date: 10, start: [9,0], end: [11,0],  name: '藏语文 / 彝语文', tag: 'special' },
-    ];
-
-    const tagLabels = { mandatory: '全国统考', elective: '等级选考', special: '民族加试' };
-    const tagClasses = { mandatory: 'tag-mandatory', elective: 'tag-elective', special: 'tag-special' };
-    const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
-
-    function getWeekDay(date) {
-        const d = new Date(GAOKAO_YEAR, 5, date);
-        return '周' + weekDays[d.getDay()];
-    }
-
-    const dateLabels = {};
-    [7, 8, 9, 10].forEach(d => { dateLabels[d] = `6月${d}日 · ${getWeekDay(d)}`; });
-
-    // 为每科生成 Date 对象（预计算，避免每秒重复创建）
-    const examDates = exams.map(ex => ({
-        start: new Date(GAOKAO_YEAR, 5, ex.date, ex.start[0], ex.start[1], 0),
-        end:   new Date(GAOKAO_YEAR, 5, ex.date, ex.end[0], ex.end[1], 0),
-    }));
-    function getExamStart(e) { return examDates[exams.indexOf(e)].start; }
-    function getExamEnd(e)   { return examDates[exams.indexOf(e)].end; }
-
-    // 预计算高考起止时间
-    const gaokaoStart = new Date(GAOKAO_YEAR, 5, 7, 0, 0, 0);
-    const gaokaoEnd   = new Date(GAOKAO_YEAR, 5, 10, 11, 0, 0);
-
-    // ============================================================
-    //  选科标记
-    // ============================================================
-
-    const SUBJECTS = {
-        primary: { label: '首选', options: ['历史', '物理'], max: 1 },
-        secondary: { label: '再选', options: ['化学', '地理', '思想政治', '生物学'], max: 2 },
-    };
-    const allSubjects = [...SUBJECTS.primary.options, ...SUBJECTS.secondary.options];
-
-    let selectedSubjects = [];
-
-    function loadSubjectSelection() {
-        try {
-            const saved = localStorage.getItem('gaokao_subjects');
-            if (saved) {
-                const parsed = JSON.parse(saved);
-                if (Array.isArray(parsed)) {
-                    selectedSubjects = parsed.filter(s => allSubjects.includes(s));
-                    return;
-                }
-            }
-        } catch (_) {}
-        selectedSubjects = [];
-    }
-
-    function saveSubjectSelection() {
-        try {
-            localStorage.setItem('gaokao_subjects', JSON.stringify(selectedSubjects));
-        } catch (_) {}
-    }
-
-    function isSubjectSelected(name) {
-        return selectedSubjects.includes(name);
-    }
-
-    function updateSelectorHint() {
-        const hint = document.querySelector('.ss-hint');
-        if (!hint) return;
-        const count = selectedSubjects.length;
-        if (count === 0) {
-            hint.textContent = '点击标记你的选科';
-        } else {
-            hint.textContent = `已选 ${count} 科`;
-        }
-    }
-
-    function initSubjectSelector() {
-        loadSubjectSelection();
-        const container = document.getElementById('subjectSelector');
-        if (!container) return;
-
-        const options = Array.from(container.querySelectorAll('.ss-option'));
-        options.forEach(el => {
-            const subject = el.dataset.subject;
-            if (isSubjectSelected(subject)) el.classList.add('active');
-
-            el.addEventListener('click', () => {
-                const group = SUBJECTS.primary.options.includes(subject) ? 'primary'
-                    : SUBJECTS.secondary.options.includes(subject) ? 'secondary' : null;
-                if (!group) return;
-
-                const isActive = el.classList.contains('active');
-
-                if (group === 'primary') {
-                    // 首选: 互斥单选
-                    if (isActive) {
-                        el.classList.remove('active');
-                        selectedSubjects = selectedSubjects.filter(s => s !== subject);
-                    } else {
-                        // 清除该组所有选中
-                        options.forEach(o => {
-                            if (SUBJECTS.primary.options.includes(o.dataset.subject)) {
-                                o.classList.remove('active');
-                            }
-                        });
-                        el.classList.add('active');
-                        selectedSubjects = selectedSubjects.filter(
-                            s => !SUBJECTS.primary.options.includes(s)
-                        );
-                        selectedSubjects.push(subject);
-                    }
-                } else {
-                    // 再选: 最多选 max 个
-                    if (isActive) {
-                        el.classList.remove('active');
-                        selectedSubjects = selectedSubjects.filter(s => s !== subject);
-                    } else {
-                        const currentCount = options.filter(o =>
-                            SUBJECTS.secondary.options.includes(o.dataset.subject) &&
-                            o.classList.contains('active')
-                        ).length;
-                        if (currentCount >= SUBJECTS.secondary.max) {
-                            // 超过上限时闪烁提示
-                            el.style.transition = 'none';
-                            el.style.borderColor = '#dc3545';
-                            el.style.color = '#dc3545';
-                            setTimeout(() => {
-                                el.style.transition = '';
-                                el.style.borderColor = '';
-                                el.style.color = '';
-                            }, 300);
-                            return;
-                        }
-                        el.classList.add('active');
-                        selectedSubjects.push(subject);
-                    }
-                }
-
-                saveSubjectSelection();
-                updateSelectorHint();
-                applySubjectHighlight();
-            });
-        });
-
-        updateSelectorHint();
-        applySubjectHighlight();
-    }
-
-    // ============================================================
-    //  DOM 引用缓存
-    // ============================================================
-
-    const dom = {};
-    const cardEls = [];
-    const selCards = [];
-
-    function cacheDom() {
-        const ids = [
-            'heroSection','heroLabel','statusMsg','yearBadge',
-            'hDays','hHours','hMins','hSecs',
-            'currentExam','ceLabel','ceBadge','ceName','ceTime',
-            'ceCountdown','ceProgressFill','ceProgressStart','ceProgressEnd',
-            'fsCurName','fsCurTime','fsProgressFill','fsProgStart','fsProgEnd',
-            'fsCurLabel','fsDd','fsDh','fsDm','fsDs',
-            'fsNextName','fsNextTime','fsNextCountdown',
-            'fsDone','fsRemain','fsTotalHint',
-            'fsStatusBar','fsStatusText','fsNext',
-        ];
-        ids.forEach(id => { dom[id] = document.getElementById(id); });
-        dom.fsInner = document.querySelector('.fs-inner');
-        dom.fsStatusDot = document.querySelector('.fs-status-dot');
-        dom.skeleton = document.getElementById('skeleton');
-
-        exams.forEach(ex => {
-            const key = `${ex.date}-${ex.name.replace(/[\/\s]/g,'')}`;
-            const card = document.getElementById(`card-${key}`);
-            cardEls.push({
-                card,
-                d: document.getElementById(`cd-d-${key}`),
-                h: document.getElementById(`cd-h-${key}`),
-                m: document.getElementById(`cd-m-${key}`),
-                s: document.getElementById(`cd-s-${key}`),
-            });
-            selCards.push({
-                card,
-                nameEl: card?.querySelector('.name'),
-                countdownEl: card?.querySelector('.countdown-mini'),
-                parts: key.includes('历史') || key.includes('物理')
-                    ? ['历史', '物理']
-                    : [ex.name],
-                isElective: ex.tag === 'elective',
-            });
-        });
-    }
-
-    function applySubjectHighlight() {
-        selCards.forEach(({ card, nameEl, countdownEl, parts, isElective }) => {
-            if (!card || !nameEl) return;
-            card.classList.remove('subject-selected', 'subject-dimmed');
-            const oldBadge = card.querySelector('.sel-badge');
-            if (oldBadge) oldBadge.remove();
-
-            const matched = parts.some(p => isSubjectSelected(p));
-            const hasSelection = selectedSubjects.length > 0;
-
-            if (matched) {
-                card.classList.add('subject-selected');
-                const badge = document.createElement('span');
-                badge.className = 'sel-badge';
-                badge.textContent = '已选';
-                if (countdownEl) countdownEl.before(badge);
-            } else if (isElective && hasSelection) {
-                card.classList.add('subject-dimmed');
-                const badge = document.createElement('span');
-                badge.className = 'sel-badge';
-                badge.textContent = '未选';
-                if (countdownEl) countdownEl.before(badge);
-            }
-        });
-    }
-
-    // ============================================================
-    //  渲染
-    // ============================================================
-
-    function pad2(n) { return String(n).padStart(2, '0'); }
-
-    function render() {
-        const root = document.getElementById('scheduleRoot');
-        root.innerHTML = '';
-
-        // 按日期分组
-        const groups = {};
-        exams.forEach(ex => {
-            if (!groups[ex.date]) groups[ex.date] = [];
-            groups[ex.date].push(ex);
-        });
-
-        Object.keys(groups).sort((a, b) => a - b).forEach(dateKey => {
-            const dayExams = groups[dateKey];
-
-            // 日期组容器
-            const grp = document.createElement('div');
-            grp.className = 'day-group';
-
-            const hdr = document.createElement('div');
-            hdr.className = 'day-header';
-            hdr.innerHTML = `<span class="day-num">${dateKey}</span><span class="day-date">${dateLabels[dateKey]}</span>`;
-            grp.appendChild(hdr);
-
-            // 按上下午分组
-            let lastSession = '';
-            dayExams.forEach(ex => {
-                const isAM = ex.start[0] < 12;
-                const session = isAM ? '上午' : '下午';
-
-                if (session !== lastSession) {
-                    lastSession = session;
-                    const div = document.createElement('div');
-                    div.className = 'session-divider';
-                    div.innerHTML = `<span class="line"></span><span class="label">${session}场</span><span class="line"></span>`;
-                    grp.appendChild(div);
-                }
-                const card = document.createElement('div');
-                card.className = 'exam-card';
-                card.id = `card-${ex.date}-${ex.name.replace(/[\/\s]/g,'')}`;
-
-                const startH = pad2(ex.start[0]), startM = pad2(ex.start[1]);
-                const endH = pad2(ex.end[0]), endM = pad2(ex.end[1]);
-                const durationMin = (ex.end[0]*60+ex.end[1]) - (ex.start[0]*60+ex.start[1]);
-                const durStr = durationMin >= 60
-                    ? `${Math.floor(durationMin/60)}时${durationMin%60 ? durationMin%60+'分' : ''}`
-                    : `${durationMin}分钟`;
-
-                card.innerHTML = `
-                    <span class="name">${ex.name}</span>
-                    <span class="meta">
-                        <span class="time-range">${startH}:${startM} – ${endH}:${endM}</span>
-                        <span class="tag ${tagClasses[ex.tag]}">${tagLabels[ex.tag]}</span>
-                        <span style="color:#bbb;font-size:0.72rem;">${durStr}</span>
-                    </span>
-                    <span class="countdown-mini" id="cd-${ex.date}-${ex.name.replace(/[\/\s]/g,'')}">
-                        <span class="cd-num" id="cd-d-${ex.date}-${ex.name.replace(/[\/\s]/g,'')}">--</span><span class="cd-unit">天</span>
-                        <span class="cd-sep">·</span>
-                        <span class="cd-num" id="cd-h-${ex.date}-${ex.name.replace(/[\/\s]/g,'')}">--</span><span class="cd-unit">时</span>
-                        <span class="cd-sep">·</span>
-                        <span class="cd-num" id="cd-m-${ex.date}-${ex.name.replace(/[\/\s]/g,'')}">--</span><span class="cd-unit">分</span>
-                        <span class="cd-sep">·</span>
-                        <span class="cd-num" id="cd-s-${ex.date}-${ex.name.replace(/[\/\s]/g,'')}">--</span><span class="cd-unit">秒</span>
-                    </span>
-                `;
-
-                grp.appendChild(card);
-            });
-
-            root.appendChild(grp);
-        });
-
-        // 提示标签
-        const hint = document.createElement('div');
-        hint.className = 'cd-legend';
-        hint.textContent = '距开考倒计时';
-        root.appendChild(hint);
-    }
-
-    // 渲染页面 + 初始化选科
-    render();
-    initSubjectSelector();
-
-    // 缓存 DOM（此时卡片已存在）
-    cacheDom();
-
-    // 骨架屏淡出
-    requestAnimationFrame(() => {
-        const sk = dom.skeleton;
-        if (sk) {
-            sk.style.transition = 'opacity 0.4s ease';
-            sk.style.opacity = '0';
-            sk.addEventListener('transitionend', () => sk.remove());
-        }
-    });
-
-    // ============================================================
-    //  更新所有倒计时
-    // ============================================================
-
-    let lastTick = 0;
-    let lastSelectionSnapshot = '';
-
-    function updateAll(force) {
-        const now = new Date();
-
-        // --- 总体倒计时 ---
-        const heroLabel = dom.heroLabel;
-        const yearBadge = dom.yearBadge;
-        const heroSection = dom.heroSection;
-        const statusMsg = dom.statusMsg;
-
-        yearBadge.textContent = GAOKAO_YEAR;
-
-        if (now >= gaokaoStart && now <= gaokaoEnd) {
-            const diff = gaokaoEnd - now;
-            setHero(diff, '距全部结束还有');
-            heroSection.classList.add('ongoing');
-            statusMsg.classList.add('show');
-        } else if (now < gaokaoStart) {
-            const diff = gaokaoStart - now;
-            setHero(diff, `距 ${GAOKAO_YEAR} 年高考还有`);
-            heroSection.classList.remove('ongoing');
-            statusMsg.classList.remove('show');
-        } else {
-            const nextStart = new Date(GAOKAO_YEAR + 1, 5, 7, 0, 0, 0);
-            const diff = nextStart - now;
-            setHero(diff, `距 ${GAOKAO_YEAR + 1} 年高考还有`);
-            heroSection.classList.remove('ongoing');
-            statusMsg.classList.remove('show');
-        }
-
-        // --- 每科倒计时（使用缓存 DOM） ---
-        exams.forEach((ex, i) => {
-            const el = cardEls[i];
-            if (!el || !el.d) return;
-            const { card, d: dEl, h: hEl, m: mEl, s: sEl } = el;
-            const start = getExamStart(ex);
-            const end   = getExamEnd(ex);
-
-            // 清除状态
-            const wasDone = card.classList.contains('exam-done');
-            const wasNow  = card.classList.contains('exam-now');
-            card.classList.remove('exam-now', 'exam-done');
-
-            if (now < start) {
-                // 尚未开始
-                const diff = start - now;
-                dEl.textContent = pad2(Math.floor(diff / 86400000));
-                hEl.textContent = pad2(Math.floor((diff % 86400000) / 3600000));
-                mEl.textContent = pad2(Math.floor((diff % 3600000) / 60000));
-                sEl.textContent = pad2(Math.floor((diff % 60000) / 1000));
-
-                // 清除 done badge（如果之前是已完成状态）
-                if (wasDone) {
-                    const b = card.querySelector('.exam-done-badge');
-                    if (b) b.remove();
-                }
-            } else if (now >= start && now <= end) {
-                // 正在考试
-                card.classList.add('exam-now');
-                const diff = end - now;
-                dEl.textContent = '00';
-                hEl.textContent = pad2(Math.floor(diff / 3600000));
-                mEl.textContent = pad2(Math.floor((diff % 3600000) / 60000));
-                sEl.textContent = pad2(Math.floor((diff % 60000) / 1000));
-
-                if (!wasNow) {
-                    // 状态切换时才操作 DOM
-                    let badge = card.querySelector('.exam-badge');
-                    if (!badge) {
-                        badge = document.createElement('span');
-                        badge.className = 'exam-badge';
-                        badge.textContent = '考试中';
-                        card.querySelector('.name').appendChild(badge);
-                    }
-                    const doneBadge = card.querySelector('.exam-done-badge');
-                    if (doneBadge) doneBadge.remove();
-                }
-            } else {
-                // 已结束
-                card.classList.add('exam-done');
-                dEl.textContent = '';
-                hEl.textContent = '';
-                mEl.textContent = '';
-                sEl.textContent = '';
-
-                if (!wasDone) {
-                    // 状态切换时才操作 DOM
-                    let doneBadge = card.querySelector('.exam-done-badge');
-                    if (!doneBadge) {
-                        doneBadge = document.createElement('span');
-                        doneBadge.className = 'exam-done-badge';
-                        doneBadge.textContent = '已完成';
-                        card.querySelector('.countdown-mini').appendChild(doneBadge);
-                    }
-                    const badge = card.querySelector('.exam-badge');
-                    if (badge) badge.remove();
-                }
-            }
-        });
-
-        // 选科高亮（仅在选中状态变化时更新）
-        const snap = selectedSubjects.sort().join(',');
-        if (force || snap !== lastSelectionSnapshot) {
-            lastSelectionSnapshot = snap;
-            applySubjectHighlight();
-        }
-
-        // --- 当前考试进程状态 ---
-        const ceEl = dom.currentExam;
-        const ceLabel = dom.ceLabel;
-        const ceBadge = dom.ceBadge;
-        const ceName = dom.ceName;
-        const ceTime = dom.ceTime;
-        const ceCountdown = dom.ceCountdown;
-        const ceFill = dom.ceProgressFill;
-        const ceStart = dom.ceProgressStart;
-        const ceEnd = dom.ceProgressEnd;
-
-        // 找到当前/下一场/上一场考试（考虑选科）
-        let current = null, next = null, lastDone = null;
-        for (const ex of exams) {
-            if (selectedSubjects.length > 0 && !isExamRelevant(ex)) continue;
-            const s = getExamStart(ex);
-            const e = getExamEnd(ex);
-            if (now >= s && now <= e) { current = ex; break; }
-            if (now < s && !next) next = ex;
-            if (now > e) lastDone = ex;
-        }
-
-        if (current) {
-            // 当前有考试
-            const s = getExamStart(current);
-            const e = getExamEnd(current);
-            const total = e - s;
-            const elapsed = now - s;
-            const remain = e - now;
-            const pct = Math.min(100, Math.max(0, (elapsed / total) * 100));
-
-            ceEl.classList.remove('ce-waiting');
-            ceEl.classList.add('show');
-            const sh = pad2(current.start[0]), sm = pad2(current.start[1]);
-            const eh = pad2(current.end[0]), em = pad2(current.end[1]);
-            ceLabel.textContent = '当前考试';
-            ceBadge.textContent = '进行中';
-            ceBadge.className = 'ce-status-badge ce-ongoing';
-            ceName.textContent = current.name;
-            ceTime.textContent = `${sh}:${sm} ~ ${eh}:${em}`;
-            const rh = Math.floor(remain / 3600000);
-            const rm = Math.floor((remain % 3600000) / 60000);
-            const rs = Math.floor((remain % 60000) / 1000);
-            ceCountdown.textContent = `${pad2(rh)}:${pad2(rm)}:${pad2(rs)}`;
-            ceFill.style.width = `${pct}%`;
-            ceStart.textContent = '开始';
-            ceEnd.textContent = '剩余 ' + ceCountdown.textContent;
-        } else if (next) {
-            // 下一场考试
-            const s = getExamStart(next);
-            const diff = s - now;
-            const d = Math.floor(diff / 86400000);
-            const h = Math.floor((diff % 86400000) / 3600000);
-            const m = Math.floor((diff % 3600000) / 60000);
-            const s_ = Math.floor((diff % 60000) / 1000);
-
-            ceEl.classList.add('show');
-            const sh = pad2(next.start[0]), sm = pad2(next.start[1]);
-            const eh = pad2(next.end[0]), em = pad2(next.end[1]);
-            ceLabel.textContent = '下一场';
-            ceBadge.textContent = '即将开始';
-            ceBadge.className = 'ce-status-badge ce-upcoming';
-            ceName.textContent = next.name;
-            ceTime.textContent = `${sh}:${sm} ~ ${eh}:${em}`;
-            ceCountdown.textContent = d > 0
-                ? `${d}天 ${pad2(h)}:${pad2(m)}:${pad2(s_)}`
-                : `${pad2(h)}:${pad2(m)}:${pad2(s_)}`;
-            ceFill.style.width = '0%';
-            ceStart.textContent = '距离开考';
-            ceEnd.textContent = ceCountdown.textContent;
-            ceEl.classList.add('ce-waiting');
-        } else if (lastDone) {
-            // 全部结束
-            ceEl.classList.add('show');
-            ceLabel.textContent = '高考进程';
-            ceBadge.textContent = '已全部完成';
-            ceBadge.className = 'ce-status-badge ce-done';
-            ceName.textContent = '所有考试已结束';
-            ceTime.textContent = '—';
-            ceCountdown.textContent = '—';
-            ceFill.style.width = '100%';
-            ceStart.textContent = '全部完成';
-            ceEnd.textContent = '金榜题名';
-            ceEl.classList.remove('ce-waiting');
-        } else {
-            ceEl.classList.remove('show', 'ce-waiting');
-        }
-    }
-
-    function setHero(diff, label) {
-        const d = Math.floor(diff / 86400000);
-        const h = Math.floor((diff % 86400000) / 3600000);
-        const m = Math.floor((diff % 3600000) / 60000);
-        const s = Math.floor((diff % 60000) / 1000);
-
-        dom.hDays.textContent   = pad2(d);
-        dom.hHours.textContent  = pad2(h);
-        dom.hMins.textContent   = pad2(m);
-        dom.hSecs.textContent   = pad2(s);
-        heroLabel.textContent   = label;
-    }
-
-    // 首次渲染
-    updateAll(true);
-
-    // 使用 requestAnimationFrame 驱动更新，每秒最多执行一次
-    function tickLoop(time) {
-        if (time - lastTick >= 1000) {
-            lastTick = time;
-            updateAll();
-        }
-        requestAnimationFrame(tickLoop);
-    }
-    requestAnimationFrame(tickLoop);
-
-    // ============================================================
-    //  主题切换
-    // ============================================================
-
-    const themeToggle = document.getElementById('themeToggle');
-
-    function loadTheme() {
-        try {
-            const saved = localStorage.getItem('gaokao_theme');
-            if (saved === 'dark') {
-                document.documentElement.setAttribute('data-theme', 'dark');
-                themeToggle.textContent = '深色';
-                return;
-            }
-        } catch (_) {}
-        document.documentElement.removeAttribute('data-theme');
-        themeToggle.textContent = '浅色';
-    }
-
-    function toggleTheme() {
-        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-        if (isDark) {
-            document.documentElement.removeAttribute('data-theme');
-            themeToggle.textContent = '浅色';
-            try { localStorage.setItem('gaokao_theme', 'light'); } catch (_) {}
-        } else {
-            document.documentElement.setAttribute('data-theme', 'dark');
-            themeToggle.textContent = '深色';
-            try { localStorage.setItem('gaokao_theme', 'dark'); } catch (_) {}
-        }
-        // 全屏打开时同步更新
-        if (fsOverlay.classList.contains('open')) updateFullscreen();
-    }
-
-    themeToggle.addEventListener('click', toggleTheme);
-    loadTheme();
-
-    // ============================================================
-    //  PWA 安装提示
-    // ============================================================
-
-    let deferredPrompt = null;
-    const installBtn = document.getElementById('installBtn');
-
-    window.addEventListener('beforeinstallprompt', (e) => {
-        e.preventDefault();
-        deferredPrompt = e;
-        installBtn.style.display = '';
-    });
-
-    installBtn.addEventListener('click', async () => {
-        if (!deferredPrompt) return;
-        deferredPrompt.prompt();
-        const result = await deferredPrompt.userChoice;
-        if (result.outcome === 'accepted') {
-            installBtn.style.display = 'none';
-        }
-        deferredPrompt = null;
-    });
-
-    window.addEventListener('appinstalled', () => {
-        installBtn.style.display = 'none';
-        deferredPrompt = null;
-    });
-
-    // ============================================================
-    //  浮动小窗 (Picture-in-Picture)
-    // ============================================================
-
-    const pipBtn = document.getElementById('pipToggle');
-    let pipWindow = null;
-    let pipInterval = null;
-
-    function buildPipContent(doc, winW, winH) {
-        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-        const bg = isDark ? '#1c1814' : '#f8f4ee';
-        const cardBg = isDark ? '#2a2420' : '#ffffff';
-        const textMain = isDark ? '#e8e0d8' : '#3a3228';
-        const textSec = isDark ? '#a09088' : '#a09080';
-        const accent = isDark ? '#d4a880' : '#c8946a';
-        const border = isDark ? '#3a342e' : '#e8e0d8';
-
-        // 根据窗口实际尺寸动态计算基准字号
-        const baseSize = Math.max(8, Math.min(winW, winH * 1.8) / 22);
-
-        doc.write(`
-            <!DOCTYPE html>
-            <html>
-            <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width,initial-scale=1.0">
-            <style>
-                * { margin: 0; padding: 0; box-sizing: border-box; }
-                html, body {
-                    width: 100%; height: 100%;
-                    overflow: hidden;
-                }
-                body {
-                    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
-                    background: ${bg};
-                    color: ${textMain};
-                    display: flex; flex-direction: column;
-                    justify-content: center; align-items: center;
-                    padding: ${baseSize * 0.4}px;
-                    user-select: none;
-                }
-                .pip-label {
-                    font-size: ${baseSize * 0.7}px;
-                    color: ${textSec};
-                    letter-spacing: 2px;
-                    margin-bottom: ${baseSize * 0.3}px;
-                    flex-shrink: 0;
-                    text-align: center;
-                    white-space: nowrap;
-                }
-                .pip-digits {
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                    gap: ${baseSize * 0.12}px;
-                    font-variant-numeric: tabular-nums;
-                    width: 100%;
-                    flex-shrink: 0;
-                }
-                .pip-digits .block {
-                    flex: 1;
-                    text-align: center;
-                    min-width: 0;
-                }
-                .pip-digits .block .num {
-                    font-size: ${baseSize * 1.6}px;
-                    font-weight: 700;
-                    color: ${accent};
-                    line-height: 1.15;
-                }
-                .pip-digits .block .unit {
-                    font-size: ${baseSize * 0.5}px;
-                    color: ${textSec};
-                    margin-top: ${baseSize * 0.08}px;
-                }
-                .pip-digits .sep {
-                    font-size: ${baseSize * 1.2}px;
-                    font-weight: 300;
-                    color: ${textSec};
-                    flex-shrink: 0;
-                    width: ${baseSize * 0.3}px;
-                    text-align: center;
-                    padding-bottom: ${baseSize * 0.45}px;
-                }
-                .pip-next {
-                    margin-top: ${baseSize * 0.5}px;
-                    padding: ${baseSize * 0.3}px ${baseSize * 0.6}px;
-                    background: ${cardBg};
-                    border-radius: ${baseSize * 0.4}px;
-                    border: 1px solid ${border};
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    width: 100%;
-                    max-width: ${Math.min(winW - baseSize * 0.8, 340)}px;
-                    flex-shrink: 0;
-                    font-size: ${baseSize * 0.7}px;
-                }
-                .pip-next .label { color: ${textSec}; white-space: nowrap; }
-                .pip-next .name { color: ${textMain}; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 0 ${baseSize * 0.25}px; flex: 1; }
-                .pip-next .time { color: ${accent}; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
-            </style>
-            </head>
-            <body>
-                <div class="pip-label" id="pipLabel">距 2027 年高考还有</div>
-                <div class="pip-digits">
-                    <div class="block"><div class="num" id="pipD">344</div><div class="unit">天</div></div>
-                    <span class="sep">:</span>
-                    <div class="block"><div class="num" id="pipH">23</div><div class="unit">时</div></div>
-                    <span class="sep">:</span>
-                    <div class="block"><div class="num" id="pipM">59</div><div class="unit">分</div></div>
-                    <span class="sep">:</span>
-                    <div class="block"><div class="num" id="pipS">58</div><div class="unit">秒</div></div>
-                </div>
-                <div class="pip-next">
-                    <span class="label">下一场</span>
-                    <span class="name" id="pipNext">语文</span>
-                    <span class="time" id="pipNextTime">344天</span>
-                </div>
-            </body>
-            </html>
-        `);
-        doc.close();
-    }
-
-    function updatePipContent() {
-        if (!pipWindow || pipWindow.closed) return;
-        const doc = pipWindow.document;
-        const now = new Date();
-
-        const gaokaoStart = new Date(GAOKAO_YEAR, 5, 7, 0, 0, 0);
-        const gaokaoEnd = new Date(GAOKAO_YEAR, 5, 10, 11, 0, 0);
-        let diff, label;
-        if (now >= gaokaoStart && now <= gaokaoEnd) {
-            diff = gaokaoEnd - now;
-            label = '距全部结束还有';
-        } else if (now < gaokaoStart) {
-            diff = gaokaoStart - now;
-            label = `距 ${GAOKAO_YEAR} 年高考还有`;
-        } else {
-            const nextStart = new Date(GAOKAO_YEAR + 1, 5, 7, 0, 0, 0);
-            diff = nextStart - now;
-            label = `距 ${GAOKAO_YEAR + 1} 年高考还有`;
-        }
-
-        const d = Math.floor(diff / 86400000);
-        const h = Math.floor((diff % 86400000) / 3600000);
-        const m = Math.floor((diff % 3600000) / 60000);
-        const s = Math.floor((diff % 60000) / 1000);
-
-        const elLabel = doc.getElementById('pipLabel');
-        const elD = doc.getElementById('pipD');
-        const elH = doc.getElementById('pipH');
-        const elM = doc.getElementById('pipM');
-        const elS = doc.getElementById('pipS');
-        if (elLabel) elLabel.textContent = label;
-        if (elD) elD.textContent = pad2(d);
-        if (elH) elH.textContent = pad2(h);
-        if (elM) elM.textContent = pad2(m);
-        if (elS) elS.textContent = pad2(s);
-
-        // 下一场
-        let nextName = '—', nextTime = '—';
-        for (const ex of exams) {
-            if (selectedSubjects.length > 0 && !isExamRelevant(ex)) continue;
-            const s = getExamStart(ex);
-            if (now < s) {
-                nextName = ex.name;
-                const diff2 = s - now;
-                const d2 = Math.floor(diff2 / 86400000);
-                const h2 = Math.floor((diff2 % 86400000) / 3600000);
-                const m2 = Math.floor((diff2 % 3600000) / 60000);
-                nextTime = d2 > 0 ? `${d2}天` : `${pad2(h2)}:${pad2(m2)}`;
-                break;
-            }
-        }
-        const elNext = doc.getElementById('pipNext');
-        const elNextTime = doc.getElementById('pipNextTime');
-        if (elNext) elNext.textContent = nextName;
-        if (elNextTime) elNextTime.textContent = nextTime;
-    }
-
-    pipBtn.addEventListener('click', async () => {
-        if (pipWindow && !pipWindow.closed) {
-            pipWindow.close();
-            clearInterval(pipInterval);
-            pipWindow = null;
-            pipInterval = null;
-            pipBtn.textContent = '小窗';
-            return;
-        }
-        if (!('documentPictureInPicture' in window)) {
-            pipBtn.textContent = '不支持';
-            setTimeout(() => { pipBtn.textContent = '小窗'; }, 1500);
-            return;
-        }
-        try {
-            const pipW = 360, pipH = 210;
-            pipWindow = await window.documentPictureInPicture.requestWindow({
-                width: pipW,
-                height: pipH,
-            });
-            pipBtn.textContent = '关闭';
-            pipWindow.document.title = '高考倒计时';
-            buildPipContent(pipWindow.document, pipW, pipH);
-            updatePipContent();
-            pipInterval = setInterval(updatePipContent, 1000);
-
-            pipWindow.addEventListener('pagehide', () => {
-                clearInterval(pipInterval);
-                pipWindow = null;
-                pipInterval = null;
-                pipBtn.textContent = '小窗';
-            });
-        } catch (e) {
-            // 用户取消或出错
-        }
-    });
-
-    // ============================================================
-    //  全屏模式
-    // ============================================================
-
-    const fsOverlay = document.getElementById('fsOverlay');
-    const fsToggle  = document.getElementById('fsToggle');
-    const fsExit    = document.getElementById('fsExit');
-
-    function isExamRelevant(ex) {
-        if (selectedSubjects.length === 0) return true;
-        if (ex.tag !== 'elective') return true;
-        const parts = ex.name.split('/').map(s => s.trim());
-        return parts.some(p => selectedSubjects.includes(p));
-    }
-
-    function updateFullscreen() {
-        const now = new Date();
-        const fsInner = document.querySelector('.fs-inner');
-
-        // 判断当前是否有考试在进行（仅相关科目）
-        let hasCurrent = false, curExam = null;
-        for (const ex of exams) {
-            if (!isExamRelevant(ex)) continue;
-            const s = getExamStart(ex), e = getExamEnd(ex);
-            if (now >= s && now <= e) { hasCurrent = true; curExam = ex; break; }
-        }
-
-        const allDone = exams.every(ex => now > getExamEnd(ex));
-
-        // 切换等待/进行中状态样式（全部结束时保持默认）
-        fsInner.classList.toggle('fs-state-waiting', !hasCurrent && !allDone);
-
-        // 状态条
-        const fsStatusBar = document.getElementById('fsStatusBar');
-        const fsStatusText = document.getElementById('fsStatusText');
-        fsStatusBar.className = 'fs-status-bar';
-        if (hasCurrent) {
-            fsStatusBar.classList.add('status-ongoing');
-            fsStatusText.textContent = '正在进行';
-        } else if (allDone) {
-            fsStatusBar.classList.add('status-done');
-            fsStatusText.textContent = '已全部完成';
-        } else {
-            fsStatusBar.classList.add('status-waiting');
-            fsStatusText.textContent = '等待开考';
-        }
-
-        const ceEl = document.getElementById('currentExam');
-        const isVisible = ceEl.classList.contains('show');
-
-        // 当前考试信息
-        const curName  = document.getElementById('ceName').textContent;
-        const curTime  = document.getElementById('ceTime').textContent;
-        const progFill = document.getElementById('ceProgressFill').style.width || '0%';
-        const progEnd  = document.getElementById('ceProgressEnd').textContent;
-
-        document.getElementById('fsCurName').textContent  = curName !== '—' ? curName : '暂无考试';
-        document.getElementById('fsCurTime').textContent  = curTime;
-        document.getElementById('fsProgressFill').style.width = progFill;
-        document.getElementById('fsProgEnd').textContent  = progEnd;
-
-        document.getElementById('fsCurLabel').textContent =
-            hasCurrent ? '当前考试' : (isVisible ? '下一场' : '高考进程');
-
-        // 更新数字块计时器
-        const fsDd = document.getElementById('fsDd');
-        const fsDh = document.getElementById('fsDh');
-        const fsDm = document.getElementById('fsDm');
-        const fsDs = document.getElementById('fsDs');
-
-        let targetEnd = null;
-        for (const ex of exams) {
-            if (!isExamRelevant(ex)) continue;
-            const s = getExamStart(ex), e = getExamEnd(ex);
-            if (now >= s && now <= e) { targetEnd = e; break; }
-            if (now < s && !targetEnd) { targetEnd = s; break; }
-        }
-        if (targetEnd) {
-            const diff = Math.max(0, targetEnd - now);
-            const d = Math.floor(diff / 86400000);
-            const h = Math.floor((diff % 86400000) / 3600000);
-            const m = Math.floor((diff % 3600000) / 60000);
-            const s = Math.floor((diff % 60000) / 1000);
-            fsDd.textContent = pad2(d);
-            fsDh.textContent = pad2(h);
-            fsDm.textContent = pad2(m);
-            fsDs.textContent = pad2(s);
-        } else {
-            fsDd.textContent = '—'; fsDh.textContent = '—';
-            fsDm.textContent = '—'; fsDs.textContent = '—';
-        }
-
-        // 下一场（仅相关科目）
-        let nextName = '—', nextTime = '—', nextCountdown = '—';
-        for (const ex of exams) {
-            if (!isExamRelevant(ex)) continue;
-            const s = getExamStart(ex);
-            if (now < s) {
-                nextName = ex.name;
-                const sh = pad2(ex.start[0]), sm = pad2(ex.start[1]);
-                const eh = pad2(ex.end[0]), em = pad2(ex.end[1]);
-                nextTime = `${sh}:${sm} ~ ${eh}:${em}`;
-                const diff = s - now;
-                const d = Math.floor(diff / 86400000);
-                const h = Math.floor((diff % 86400000) / 3600000);
-                const m = Math.floor((diff % 3600000) / 60000);
-                const s_ = Math.floor((diff % 60000) / 1000);
-                nextCountdown = d > 0
-                    ? `${d}天 ${pad2(h)}:${pad2(m)}:${pad2(s_)}`
-                    : `${pad2(h)}:${pad2(m)}:${pad2(s_)}`;
-                break;
-            }
-        }
-
-        if (allDone) {
-            document.getElementById('fsNext').style.display = 'none';
-        } else {
-            document.getElementById('fsNext').style.display = 'flex';
-            document.getElementById('fsNextName').textContent      = nextName;
-            document.getElementById('fsNextTime').textContent      = nextTime;
-            document.getElementById('fsNextCountdown').textContent = nextCountdown;
-        }
-
-        // 进度统计（仅相关科目）
-        const relevantExams = exams.filter(ex => isExamRelevant(ex));
-        let doneCount = 0;
-        relevantExams.forEach(ex => { if (now > getExamEnd(ex)) doneCount++; });
-        document.getElementById('fsDone').textContent   = doneCount;
-        document.getElementById('fsRemain').textContent = relevantExams.length - doneCount;
-        const fsHint = document.getElementById('fsTotalHint');
-        if (fsHint) {
-            fsHint.textContent = selectedSubjects.length > 0
-                ? '· 已选科'
-                : '· 全部科目';
-        }
-    }
-
-    function lockScroll(lock) {
-        document.documentElement.style.overflow = lock ? 'hidden' : '';
-        document.body.style.overflow = lock ? 'hidden' : '';
-    }
-
-    fsToggle.addEventListener('click', () => {
-        fsOverlay.classList.add('open');
-        lockScroll(true);
-        updateFullscreen();
-        if (document.documentElement.requestFullscreen) {
-            document.documentElement.requestFullscreen().catch(() => {});
-        }
-    });
-
-    fsExit.addEventListener('click', () => {
-        fsOverlay.classList.remove('open');
-        lockScroll(false);
-        if (document.exitFullscreen) {
-            document.exitFullscreen().catch(() => {});
-        }
-    });
-
-    // ESC 或 F11 退出时同步关闭
-    document.addEventListener('fullscreenchange', () => {
-        if (!document.fullscreenElement) {
-            fsOverlay.classList.remove('open');
-            lockScroll(false);
-        }
-    });
-
-    // 全屏时也同步更新
-    setInterval(() => {
-        if (fsOverlay.classList.contains('open')) updateFullscreen();
-    }, 1000);
-</script>
-
-<script>
-    // Service Worker 注册（需要 HTTPS 或 localhost）
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('./sw.js').catch(() => {
-                // file:// 或老旧浏览器会失败，静默处理
-            });
-        });
-    }
-</script>
+<script src="gaokao.js"></script>
 
 </body>
 </html>
