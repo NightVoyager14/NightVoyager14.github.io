@@ -346,14 +346,45 @@ cacheDom();
 loadPhaseSettings();
 examDates = computeExamDates();
 
-// 骨架屏淡出
-requestAnimationFrame(() => {
+/**
+ * 骨架屏淡出。
+ *
+ * 这里原先只靠 transitionend 来移除元素，实测在部分情况下该事件不会触发
+ * （首帧内同时写入 transition 与 opacity，浏览器可能直接视为终态、不产生过渡；
+ *  标签页在后台、元素未参与绘制、或过渡被中断时同样不会派发），
+ * 结果骨架屏永久留在 DOM 中盖住正文，表现为白屏。
+ *
+ * 因此改为三重保障：transitionend、兜底定时器、以及淡出结束后强制 display:none。
+ * 无论哪条先到都只执行一次；即使过渡完全不触发，也会在超时后被隐藏并移除。
+ */
+function hideSkeleton() {
     const sk = dom.skeleton;
-    if (sk) {
-        sk.style.transition = 'opacity 0.4s ease';
-        sk.style.opacity = '0';
-        sk.addEventListener('transitionend', () => sk.remove());
-    }
+    if (!sk || !sk.parentNode) return;
+
+    let done = false;
+    let timer = 0;
+    const finish = () => {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        // 兜底：即便过渡从未发生（opacity 仍为 1），也必须让骨架屏退出视觉层
+        sk.style.display = 'none';
+        if (sk.parentNode) sk.remove();
+    };
+
+    sk.style.transition = 'opacity 0.4s ease';
+    sk.style.opacity = '0';
+    sk.addEventListener('transitionend', (e) => {
+        if (e.target === sk && e.propertyName === 'opacity') finish();
+    });
+
+    // 兜底：略长于 0.4s 过渡时长
+    timer = setTimeout(finish, 700);
+}
+
+// 先让首帧完成样式计算，再触发淡出，确保 opacity 真的发生过渡
+requestAnimationFrame(() => {
+    requestAnimationFrame(hideSkeleton);
 });
 
 // ============================================================
