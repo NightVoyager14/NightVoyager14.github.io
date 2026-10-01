@@ -1,0 +1,12 @@
+# 本地分析/验证脚本（不参与发布）
+.analysis/
+
+# 访问测试遗留的空探针文件（Windows 权限拒绝删除，已从版本控制排除）
+gaokao/.probe2
+gaokao/.write-probe
+
+# 编辑器与系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

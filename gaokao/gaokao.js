@@ -1,67 +1,54 @@
 // ============================================================
-//  四川 3+1+2 新高考 · 考试数据
+//  四川 3+1+2 新高考 · 页面逻辑
+//  ------------------------------------------------------------
+//  常量、时间计算与纯函数都在 time.js；本文件负责 DOM 渲染与交互。
 // ============================================================
 
-const GAOKAO_YEAR = (() => {
-    const now = new Date();
-    const y = now.getFullYear();
-    const end = new Date(y, 5, 10, 11, 0, 0);
-    return now > end ? y + 1 : y;
-})();
-
-// 届数标识（始终显示当前考生所属届）
-const COHORT_LABEL = GAOKAO_YEAR + '届';
-
-// 考试配置
-const exams = [
-    // 6月7日
-    { date: 7, start: [9,0],  end: [11,30], name: '语文',         tag: 'mandatory' },
-    { date: 7, start: [15,0], end: [17,0],  name: '数学',         tag: 'mandatory' },
-    // 6月8日
-    { date: 8, start: [9,0],  end: [10,15], name: '历史 / 物理',  tag: 'elective' },
-    { date: 8, start: [15,0], end: [17,0],  name: '外语',         tag: 'mandatory' },
-    // 6月9日
-    { date: 9, start: [8,30], end: [9,45],  name: '化学',         tag: 'elective' },
-    { date: 9, start: [11,0], end: [12,15], name: '地理',         tag: 'elective' },
-    { date: 9, start: [14,30],end: [15,45], name: '思想政治',     tag: 'elective' },
-    { date: 9, start: [17,0], end: [18,15], name: '生物学',       tag: 'elective' },
-    // 6月10日
-    { date: 10, start: [9,0], end: [11,0],  name: '藏语文 / 彝语文', tag: 'special' },
-];
-
-const tagLabels = { mandatory: '全国统考', elective: '等级选考', special: '民族加试' };
-const tagClasses = { mandatory: 'tag-mandatory', elective: 'tag-elective', special: 'tag-special' };
-const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
-
-function getWeekDay(date) {
-    const d = new Date(GAOKAO_YEAR, 5, date);
-    return '周' + weekDays[d.getDay()];
+/** 取北京时间下的「日」序号（自 1970-01-01 起的天数），用于跨时区安全的整日推算 */
+function cnDayNumber(date) {
+    const t = new Date(date.getTime() + CN_OFFSET_MIN * 60000);
+    return Math.floor(Date.UTC(t.getUTCFullYear(), t.getUTCMonth(), t.getUTCDate()) / MS_DAY);
 }
 
-const dateLabels = {};
-[7, 8, 9, 10].forEach(d => { dateLabels[d] = `6月${d}日 · ${getWeekDay(d)}`; });
+/** 按北京时间日历天整日平移（规避夏令时/时区问题） */
+function addDays(date, days) {
+    const t = new Date(date.getTime() + CN_OFFSET_MIN * 60000);
+    const shifted = new Date(Date.UTC(
+        t.getUTCFullYear(), t.getUTCMonth(), t.getUTCDate() + days,
+        t.getUTCHours(), t.getUTCMinutes(), t.getUTCSeconds()
+    ));
+    return new Date(shifted.getTime() - CN_OFFSET_MIN * 60000);
+}
 
-// 为每科生成 Date 对象（预计算，避免每秒重复创建）
-const examDates = exams.map(ex => ({
-    start: new Date(GAOKAO_YEAR, 5, ex.date, ex.start[0], ex.start[1], 0),
-    end:   new Date(GAOKAO_YEAR, 5, ex.date, ex.end[0], ex.end[1], 0),
-}));
+// 考试 Date 对象按「当前生效的高考日期」推导。
+// 用户在设置里改过高考起止后，科目时间会跟随高考起始日整体平移，
+// 保证 Hero 倒计时、科目卡片、全屏、小窗四处永远一致。
+function computeExamDates() {
+    const { start: gkStart } = getPhaseDates('final');
+    const dayOffset = cnDayNumber(gkStart) - cnDayNumber(bjDate(GAOKAO_YEAR, 6, 7));
+    return exams.map(ex => ({
+        start: addDays(examStartAt(ex, GAOKAO_YEAR), dayOffset),
+        end: addDays(examEndAt(ex, GAOKAO_YEAR), dayOffset),
+    }));
+}
+
+let examDates = [];
 function getExamStart(e) { return examDates[exams.indexOf(e)].start; }
 function getExamEnd(e)   { return examDates[exams.indexOf(e)].end; }
 
-// 预计算高考起止时间
-const gaokaoStart = new Date(GAOKAO_YEAR, 5, 7, 0, 0, 0);
-const gaokaoEnd   = new Date(GAOKAO_YEAR, 5, 10, 11, 0, 0);
+/** 高考总进程的起点：当前生效的高考开始日 */
+function getGaokaoStart() { return getPhaseDates('final').start; }
+
+/** 高考总进程的终点：最后一场考试结束 与 用户设定结束日 中较晚者 */
+function getGaokaoEnd() {
+    const lastEnd = examDates[examDates.length - 1].end;
+    const { end } = getPhaseDates('final');
+    return end > lastEnd ? end : lastEnd;
+}
 
 // ============================================================
 //  选科标记
 // ============================================================
-
-const SUBJECTS = {
-    primary: { label: '首选', options: ['历史', '物理'], max: 1 },
-    secondary: { label: '再选', options: ['化学', '地理', '思想政治', '生物学'], max: 2 },
-};
-const allSubjects = [...SUBJECTS.primary.options, ...SUBJECTS.secondary.options];
 
 let selectedSubjects = [];
 
@@ -100,73 +87,89 @@ function updateSelectorHint() {
     }
 }
 
+/** 事件目标可能落在按钮内的文本节点上，统一取回按钮本身 */
+function closestSubjectOption(node) {
+    if (!node) return null;
+    return node.closest ? node.closest('.ss-option') : null;
+}
+
+/** 同步 .active 类与 aria-pressed，保证视觉与语义一致 */
+function setSubjectActive(el, active) {
+    el.classList.toggle('active', active);
+    el.setAttribute('aria-pressed', String(active));
+    if (active) el.setAttribute('data-active', '');
+    else el.removeAttribute('data-active');
+}
+
 function initSubjectSelector() {
     loadSubjectSelection();
     const container = document.getElementById('subjectSelector');
     if (!container) return;
 
     const options = Array.from(container.querySelectorAll('.ss-option'));
+    // 初始状态：同步 aria-pressed（HTML 里默认 false）
     options.forEach(el => {
-        const subject = el.dataset.subject;
-        if (isSubjectSelected(subject)) el.classList.add('active');
-
-        el.addEventListener('click', () => {
-            const group = SUBJECTS.primary.options.includes(subject) ? 'primary'
-                : SUBJECTS.secondary.options.includes(subject) ? 'secondary' : null;
-            if (!group) return;
-
-            const isActive = el.classList.contains('active');
-
-            if (group === 'primary') {
-                // 首选: 互斥单选
-                if (isActive) {
-                    el.classList.remove('active');
-                    selectedSubjects = selectedSubjects.filter(s => s !== subject);
-                } else {
-                    // 清除该组所有选中
-                    options.forEach(o => {
-                        if (SUBJECTS.primary.options.includes(o.dataset.subject)) {
-                            o.classList.remove('active');
-                        }
-                    });
-                    el.classList.add('active');
-                    selectedSubjects = selectedSubjects.filter(
-                        s => !SUBJECTS.primary.options.includes(s)
-                    );
-                    selectedSubjects.push(subject);
-                }
-            } else {
-                // 再选: 最多选 max 个
-                if (isActive) {
-                    el.classList.remove('active');
-                    selectedSubjects = selectedSubjects.filter(s => s !== subject);
-                } else {
-                    const currentCount = options.filter(o =>
-                        SUBJECTS.secondary.options.includes(o.dataset.subject) &&
-                        o.classList.contains('active')
-                    ).length;
-                    if (currentCount >= SUBJECTS.secondary.max) {
-                        // 超过上限时闪烁提示
-                        el.style.transition = 'none';
-                        el.style.borderColor = '#dc3545';
-                        el.style.color = '#dc3545';
-                        setTimeout(() => {
-                            el.style.transition = '';
-                            el.style.borderColor = '';
-                            el.style.color = '';
-                        }, 300);
-                        return;
-                    }
-                    el.classList.add('active');
-                    selectedSubjects.push(subject);
-                }
-            }
-
-            saveSubjectSelection();
-            updateSelectorHint();
-            applySubjectHighlight();
-        });
+        setSubjectActive(el, isSubjectSelected(el.dataset.subject));
     });
+
+    container.addEventListener('click', (e) => {
+        const el = closestSubjectOption(e.target);
+        if (!el || !container.contains(el)) return;
+        toggleSubject(el);
+    });
+
+    // <button> 原生支持 Enter/Space，无需额外键盘处理
+    function toggleSubject(el) {
+        const subject = el.dataset.subject;
+        const group = SUBJECTS.primary.options.includes(subject) ? 'primary'
+            : SUBJECTS.secondary.options.includes(subject) ? 'secondary' : null;
+        if (!group) return;
+
+        const isActive = el.classList.contains('active');
+
+        if (group === 'primary') {
+            // 首选：互斥单选
+            if (isActive) {
+                setSubjectActive(el, false);
+                selectedSubjects = selectedSubjects.filter(s => s !== subject);
+            } else {
+                // 清除该组所有选中
+                options.forEach(o => {
+                    if (SUBJECTS.primary.options.includes(o.dataset.subject)) {
+                        setSubjectActive(o, false);
+                    }
+                });
+                setSubjectActive(el, true);
+                selectedSubjects = selectedSubjects.filter(
+                    s => !SUBJECTS.primary.options.includes(s)
+                );
+                selectedSubjects.push(subject);
+            }
+        } else {
+            // 再选：最多选 max 个
+            if (isActive) {
+                setSubjectActive(el, false);
+                selectedSubjects = selectedSubjects.filter(s => s !== subject);
+            } else {
+                const currentCount = options.filter(o =>
+                    SUBJECTS.secondary.options.includes(o.dataset.subject) &&
+                    o.classList.contains('active')
+                ).length;
+                if (currentCount >= SUBJECTS.secondary.max) {
+                    // 超过上限：抖动提示（颜色走 CSS 变量，深浅主题一致）
+                    el.classList.add('ss-reject');
+                    setTimeout(() => el.classList.remove('ss-reject'), 320);
+                    return;
+                }
+                setSubjectActive(el, true);
+                selectedSubjects.push(subject);
+            }
+        }
+
+        saveSubjectSelection();
+        updateSelectorHint();
+        applySubjectHighlight();
+    }
 
     updateSelectorHint();
     applySubjectHighlight();
@@ -186,7 +189,7 @@ let phaseOverrides = {};
 
 function cacheDom() {
     const ids = [
-        'heroSection','heroLabel','statusMsg','yearBadge',
+        'heroSection','heroLabel','statusMsg','yearBadge','heroA11y',
         'hDays','hHours','hMins','hSecs',
         'currentExam','ceLabel','ceBadge','ceName','ceTime',
         'ceCountdown','ceProgressFill','ceProgressStart','ceProgressEnd',
@@ -198,7 +201,6 @@ function cacheDom() {
     ];
     ids.forEach(id => { dom[id] = document.getElementById(id); });
     dom.fsInner = document.querySelector('.fs-inner');
-    dom.fsStatusDot = document.querySelector('.fs-status-dot');
     dom.skeleton = document.getElementById('skeleton');
 
     exams.forEach(ex => {
@@ -253,7 +255,7 @@ function applySubjectHighlight() {
 //  渲染
 // ============================================================
 
-function pad2(n) { return String(n).padStart(2, '0'); }
+// pad2 / splitDuration 等纯函数在 time.js
 
 function render() {
     const root = document.getElementById('scheduleRoot');
@@ -275,7 +277,7 @@ function render() {
 
         const hdr = document.createElement('div');
         hdr.className = 'day-header';
-        hdr.innerHTML = `<span class="day-num">${dateKey}</span><span class="day-date">${dateLabels[dateKey]}</span>`;
+        hdr.innerHTML = `<span class="day-num">${dateKey}</span><span class="day-date">${dateLabels[Number(dateKey)]}</span>`;
         grp.appendChild(hdr);
 
         // 按上下午分组
@@ -307,7 +309,7 @@ function render() {
                 <span class="meta">
                     <span class="time-range">${startH}:${startM} – ${endH}:${endM}</span>
                     <span class="tag ${tagClasses[ex.tag]}">${tagLabels[ex.tag]}</span>
-                    <span style="color:#bbb;font-size:0.72rem;">${durStr}</span>
+                    <span class="dur-note">${durStr}</span>
                 </span>
                 <span class="countdown-mini" id="cd-${ex.date}-${ex.name.replace(/[\/\s]/g,'')}">
                     <span class="cd-num" id="cd-d-${ex.date}-${ex.name.replace(/[\/\s]/g,'')}">--</span><span class="cd-unit">天</span>
@@ -340,6 +342,10 @@ initSubjectSelector();
 // 缓存 DOM（此时卡片已存在）
 cacheDom();
 
+// 先读取用户设置，再据此推导科目日程（高考日期与科目日程同源）
+loadPhaseSettings();
+examDates = computeExamDates();
+
 // 骨架屏淡出
 requestAnimationFrame(() => {
     const sk = dom.skeleton;
@@ -356,41 +362,55 @@ requestAnimationFrame(() => {
 
 let lastTick = 0;
 let lastSelectionSnapshot = '';
+let lastA11yKey = '';
+let lastPhaseStatusKey = '';
+
+/** 只在内容真的变化时写入，减少每帧无谓的 DOM 触碰 */
+function setText(el, value) {
+    if (el && el.textContent !== value) el.textContent = value;
+}
 
 function updateAll(force) {
     const now = new Date();
 
-    // 非高考阶段：仅更新 hero 和阶段详情
+    // 阶段导航徽章：任何阶段下都可能随时间翻转
+    syncPhaseNavStatus();
+
+    // 非高考阶段：Hero 与阶段详情同源，走 updatePhaseHero
     if (activePhaseId !== 'final') {
         updatePhaseHero();
         updatePhaseDetail();
         return;
     }
 
-    // --- 总体倒计时（高考） ---
-    const heroLabel = dom.heroLabel;
-    const yearBadge = dom.yearBadge;
-    const heroSection = dom.heroSection;
-    const statusMsg = dom.statusMsg;
+    // --- 总体倒计时（高考）---
+    // 与阶段系统同源：高考日期若被用户修改，这里随之变化
+    const gkStart = getGaokaoStart();
+    const gkEnd = getGaokaoEnd();
+    const state = targetState(now, gkStart, gkEnd);
+    const ongoing = state === 'ongoing';
 
-    yearBadge.textContent = COHORT_LABEL;
-
-    if (now >= gaokaoStart && now <= gaokaoEnd) {
-        const diff = gaokaoEnd - now;
-        setHero(diff, '距全部结束还有');
-        heroSection.classList.add('ongoing');
-        statusMsg.classList.add('show');
-    } else if (now < gaokaoStart) {
-        const diff = gaokaoStart - now;
-        setHero(diff, `距 ${GAOKAO_YEAR} 年高考还有`);
-        heroSection.classList.remove('ongoing');
-        statusMsg.classList.remove('show');
+    if (ongoing) {
+        setHero(gkEnd - now, '距全部结束还有');
+    } else if (state === 'waiting') {
+        setHero(gkStart - now, `距 ${GAOKAO_YEAR} 年高考还有`);
     } else {
-        const nextStart = new Date(GAOKAO_YEAR + 1, 5, 7, 0, 0, 0);
-        const diff = nextStart - now;
-        setHero(diff, `距 ${GAOKAO_YEAR + 1} 年高考还有`);
-        heroSection.classList.remove('ongoing');
-        statusMsg.classList.remove('show');
+        setHero(bjDate(GAOKAO_YEAR + 1, 6, 7, 0, 0) - now, `距 ${GAOKAO_YEAR + 1} 年高考还有`);
+    }
+    // P1-5：接通 Hero 脉冲动画（原实现只在永不执行的分支里 add，属死代码）
+    dom.heroSection.classList.toggle('ongoing', ongoing);
+    dom.statusMsg.classList.toggle('show', ongoing);
+
+    /* setHero 内已更新 dom.heroLabel */
+    setText(dom.yearBadge, COHORT_LABEL);
+
+    // 读屏播报：仅在分钟级变化时更新，避免每秒打扰
+    const a11yKey = `${dom.hDays.textContent}-${dom.hHours.textContent}-${dom.hMins.textContent}`;
+    if (a11yKey !== lastA11yKey) {
+        lastA11yKey = a11yKey;
+        setText(dom.heroA11y,
+            `${dom.heroLabel.textContent} ${dom.hDays.textContent} 天 ` +
+            `${dom.hHours.textContent} 小时 ${dom.hMins.textContent} 分`);
     }
 
     // --- 每科倒计时（使用缓存的 DOM） ---
@@ -406,11 +426,11 @@ function updateAll(force) {
         card.classList.remove('exam-now', 'exam-done');
 
         if (now < start) {
-            const diff = start - now;
-            dEl.textContent = pad2(Math.floor(diff / 86400000));
-            hEl.textContent = pad2(Math.floor((diff % 86400000) / 3600000));
-            mEl.textContent = pad2(Math.floor((diff % 3600000) / 60000));
-            sEl.textContent = pad2(Math.floor((diff % 60000) / 1000));
+            const { d, h, m, s } = splitDuration(start - now);
+            setText(dEl, pad2(d));
+            setText(hEl, pad2(h));
+            setText(mEl, pad2(m));
+            setText(sEl, pad2(s));
 
             if (wasDone) {
                 const b = card.querySelector('.exam-done-badge');
@@ -418,11 +438,11 @@ function updateAll(force) {
             }
         } else if (now >= start && now <= end) {
             card.classList.add('exam-now');
-            const diff = end - now;
-            dEl.textContent = '00';
-            hEl.textContent = pad2(Math.floor(diff / 3600000));
-            mEl.textContent = pad2(Math.floor((diff % 3600000) / 60000));
-            sEl.textContent = pad2(Math.floor((diff % 60000) / 1000));
+            const { h, m, s } = splitDuration(end - now);
+            setText(dEl, '00');
+            setText(hEl, pad2(h));
+            setText(mEl, pad2(m));
+            setText(sEl, pad2(s));
 
             if (!wasNow) {
                 let badge = card.querySelector('.exam-badge');
@@ -437,10 +457,10 @@ function updateAll(force) {
             }
         } else {
             card.classList.add('exam-done');
-            dEl.textContent = '';
-            hEl.textContent = '';
-            mEl.textContent = '';
-            sEl.textContent = '';
+            setText(dEl, '');
+            setText(hEl, '');
+            setText(mEl, '');
+            setText(sEl, '');
 
             if (!wasDone) {
                 let doneBadge = card.querySelector('.exam-done-badge');
@@ -477,7 +497,7 @@ function updateAll(force) {
     // 找到当前/下一场/上一场考试（考虑选科）
     let current = null, next = null, lastDone = null;
     for (const ex of exams) {
-        if (selectedSubjects.length > 0 && !isExamRelevant(ex)) continue;
+        if (selectedSubjects.length > 0 && !isExamRelevant(ex, selectedSubjects)) continue;
         const s = getExamStart(ex);
         const e = getExamEnd(ex);
         if (now >= s && now <= e) { current = ex; break; }
@@ -550,26 +570,26 @@ function updateAll(force) {
 }
 
 function setHero(diff, label) {
-    const d = Math.floor(diff / 86400000);
-    const h = Math.floor((diff % 86400000) / 3600000);
-    const m = Math.floor((diff % 3600000) / 60000);
-    const s = Math.floor((diff % 60000) / 1000);
+    const { d, h, m, s } = splitDuration(diff);
 
-    dom.hDays.textContent   = pad2(d);
-    dom.hHours.textContent  = pad2(h);
-    dom.hMins.textContent   = pad2(m);
-    dom.hSecs.textContent   = pad2(s);
-    heroLabel.textContent   = label;
+    setText(dom.hDays, pad2(d));
+    setText(dom.hHours, pad2(h));
+    setText(dom.hMins, pad2(m));
+    setText(dom.hSecs, pad2(s));
+    setText(dom.heroLabel, label);
 }
 
 // 首次渲染
 updateAll(true);
 
-// 使用 requestAnimationFrame 驱动更新，每秒最多执行一次
+// 使用 requestAnimationFrame 驱动更新，每秒最多执行一次。
+// 全屏覆盖层打开时同步刷新，替代原先独立的 setInterval。
 function tickLoop(time) {
     if (time - lastTick >= 1000) {
         lastTick = time;
         updateAll();
+        if (fsOverlay.classList.contains('open')) updateFullscreen();
+        if (pipWindow && !pipWindow.closed) updatePipContent();
     }
     requestAnimationFrame(tickLoop);
 }
@@ -581,30 +601,36 @@ requestAnimationFrame(tickLoop);
 
 const themeToggle = document.getElementById('themeToggle');
 
+function syncThemeButton() {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    setText(themeToggle, isDark ? '深色 →' : '浅色 →');
+    themeToggle.setAttribute('aria-pressed', String(isDark));
+    themeToggle.title = isDark ? '当前深色，点击切换为浅色' : '当前浅色，点击切换为深色';
+}
+
 function loadTheme() {
     try {
         const saved = localStorage.getItem('gaokao_theme');
         if (saved === 'dark') {
             document.documentElement.setAttribute('data-theme', 'dark');
-            themeToggle.textContent = '深色';
+            syncThemeButton();
             return;
         }
     } catch (_) {}
     document.documentElement.removeAttribute('data-theme');
-    themeToggle.textContent = '浅色';
+    syncThemeButton();
 }
 
 function toggleTheme() {
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     if (isDark) {
         document.documentElement.removeAttribute('data-theme');
-        themeToggle.textContent = '浅色';
         try { localStorage.setItem('gaokao_theme', 'light'); } catch (_) {}
     } else {
         document.documentElement.setAttribute('data-theme', 'dark');
-        themeToggle.textContent = '深色';
         try { localStorage.setItem('gaokao_theme', 'dark'); } catch (_) {}
     }
+    syncThemeButton();
     if (fsOverlay.classList.contains('open')) updateFullscreen();
 }
 
@@ -759,25 +785,22 @@ function updatePipContent() {
     const doc = pipWindow.document;
     const now = new Date();
 
-    const gaokaoStart = new Date(GAOKAO_YEAR, 5, 7, 0, 0, 0);
-    const gaokaoEnd = new Date(GAOKAO_YEAR, 5, 10, 11, 0, 0);
+    // 复用全局同源日期（原先在此重复声明，遮蔽了外层常量）
+    const gkStart = getGaokaoStart();
+    const gkEnd = getGaokaoEnd();
     let diff, label;
-    if (now >= gaokaoStart && now <= gaokaoEnd) {
-        diff = gaokaoEnd - now;
+    if (now >= gkStart && now <= gkEnd) {
+        diff = gkEnd - now;
         label = '距全部结束还有';
-    } else if (now < gaokaoStart) {
-        diff = gaokaoStart - now;
+    } else if (now < gkStart) {
+        diff = gkStart - now;
         label = `距 ${GAOKAO_YEAR} 年高考还有`;
     } else {
-        const nextStart = new Date(GAOKAO_YEAR + 1, 5, 7, 0, 0, 0);
-        diff = nextStart - now;
+        diff = bjDate(GAOKAO_YEAR + 1, 6, 7, 0, 0) - now;
         label = `距 ${GAOKAO_YEAR + 1} 年高考还有`;
     }
 
-    const d = Math.floor(diff / 86400000);
-    const h = Math.floor((diff % 86400000) / 3600000);
-    const m = Math.floor((diff % 3600000) / 60000);
-    const s = Math.floor((diff % 60000) / 1000);
+    const { d, h, m, s } = splitDuration(diff);
 
     const elLabel = doc.getElementById('pipLabel');
     const elD = doc.getElementById('pipD');
@@ -792,15 +815,12 @@ function updatePipContent() {
 
     let nextName = '—', nextTime = '—';
     for (const ex of exams) {
-        if (selectedSubjects.length > 0 && !isExamRelevant(ex)) continue;
+        if (selectedSubjects.length > 0 && !isExamRelevant(ex, selectedSubjects)) continue;
         const s = getExamStart(ex);
         if (now < s) {
             nextName = ex.name;
-            const diff2 = s - now;
-            const d2 = Math.floor(diff2 / 86400000);
-            const h2 = Math.floor((diff2 % 86400000) / 3600000);
-            const m2 = Math.floor((diff2 % 3600000) / 60000);
-            nextTime = d2 > 0 ? `${d2}天` : `${pad2(h2)}:${pad2(m2)}`;
+            const d2 = splitDuration(s - now);
+            nextTime = d2.d > 0 ? `${d2.d}天` : `${pad2(d2.h)}:${pad2(d2.m)}`;
             break;
         }
     }
@@ -855,11 +875,11 @@ const fsOverlay = document.getElementById('fsOverlay');
 const fsToggle  = document.getElementById('fsToggle');
 const fsExit    = document.getElementById('fsExit');
 
-function isExamRelevant(ex) {
-    if (selectedSubjects.length === 0) return true;
-    if (ex.tag !== 'elective') return true;
-    const parts = ex.name.split('/').map(s => s.trim());
-    return parts.some(p => selectedSubjects.includes(p));
+// isExamRelevant 已移至 time.js（按传入的选科判断，避免隐式依赖全局状态）
+
+/** 全屏进度条整块（.fs-progress-wrap）——用选择器定位，避免脆弱的 parentElement 链 */
+function fsProgressWrap() {
+    return document.querySelector('#fsOverlay .fs-progress-wrap');
 }
 
 function updateFullscreen() {
@@ -874,16 +894,16 @@ function updateFullscreen() {
         document.getElementById('fsStatusBar').style.display = 'none';
         document.getElementById('fsNext').style.display = 'none';
         document.getElementById('fsSummary').style.display = 'none';
-        document.getElementById('fsProgressFill').parentElement.parentElement.style.display = 'none';
+        const wrap = fsProgressWrap();
+        if (wrap) wrap.style.display = 'none';
         document.getElementById('fsCurTime').style.display = 'none';
 
         document.getElementById('fsCurLabel').textContent = cfg.name;
         document.getElementById('fsCurName').textContent = status === 'upcoming' ? '即将开始'
             : status === 'ongoing' ? '进行中' : '已完成';
 
-        const fmtOpt = { year: 'numeric', month: 'long', day: 'numeric' };
         document.getElementById('fsCurTime').textContent =
-            `${start.toLocaleDateString('zh-CN', fmtOpt)} - ${end.toLocaleDateString('zh-CN', { month: 'long', day: 'numeric' })}`;
+            `${fmtCnFull(start)} - ${fmtCnMonthDay(end)}`;
 
         const fsDd = document.getElementById('fsDd');
         const fsDh = document.getElementById('fsDh');
@@ -910,12 +930,13 @@ function updateFullscreen() {
     document.getElementById('fsStatusBar').style.display = '';
     document.getElementById('fsNext').style.display = '';
     document.getElementById('fsSummary').style.display = '';
-    document.getElementById('fsProgressFill').parentElement.parentElement.style.display = '';
+    const wrap = fsProgressWrap();
+    if (wrap) wrap.style.display = '';
     document.getElementById('fsCurTime').style.display = '';
 
     let hasCurrent = false, curExam = null;
     for (const ex of exams) {
-        if (!isExamRelevant(ex)) continue;
+        if (!isExamRelevant(ex, selectedSubjects)) continue;
         const s = getExamStart(ex), e = getExamEnd(ex);
         if (now >= s && now <= e) { hasCurrent = true; curExam = ex; break; }
     }
@@ -959,7 +980,7 @@ function updateFullscreen() {
 
     let targetEnd = null;
     for (const ex of exams) {
-        if (!isExamRelevant(ex)) continue;
+        if (!isExamRelevant(ex, selectedSubjects)) continue;
         const s = getExamStart(ex), e = getExamEnd(ex);
         if (now >= s && now <= e) { targetEnd = e; break; }
         if (now < s && !targetEnd) { targetEnd = s; break; }
@@ -981,7 +1002,7 @@ function updateFullscreen() {
 
     let nextName = '—', nextTime = '—', nextCountdown = '—';
     for (const ex of exams) {
-        if (!isExamRelevant(ex)) continue;
+        if (!isExamRelevant(ex, selectedSubjects)) continue;
         const s = getExamStart(ex);
         if (now < s) {
             nextName = ex.name;
@@ -1009,7 +1030,7 @@ function updateFullscreen() {
         document.getElementById('fsNextCountdown').textContent = nextCountdown;
     }
 
-    const relevantExams = exams.filter(ex => isExamRelevant(ex));
+    const relevantExams = exams.filter(ex => isExamRelevant(ex, selectedSubjects));
     let doneCount = 0;
     relevantExams.forEach(ex => { if (now > getExamEnd(ex)) doneCount++; });
     document.getElementById('fsDone').textContent   = doneCount;
@@ -1051,55 +1072,23 @@ document.addEventListener('fullscreenchange', () => {
     }
 });
 
-// 全屏时也同步更新
-setInterval(() => {
-    if (fsOverlay.classList.contains('open')) updateFullscreen();
-}, 1000);
+// 全屏刷新已合并进 tickLoop（每秒一次），不再单独占用一个 setInterval
 
 // ============================================================
 //  v2.0.0 - 诊断考试阶段管理
 // ============================================================
 
-const PHASE_CONFIG = {
-    zero: {
-        id: 'zero', name: '零诊', longName: '零诊 · 摸底考试', short: '零',
-        defaultStart: { year: 2026, month: 7, day: 6 },
-        defaultEnd: { year: 2026, month: 7, day: 8 },
-        desc: '高三摸底考试',
-    },
-    first: {
-        id: 'first', name: '一诊', longName: '第一次诊断性考试', short: '一',
-        defaultStart: { year: 2026, month: 12, day: 22 },
-        defaultEnd: { year: 2026, month: 12, day: 24 },
-        desc: '第一次诊断性考试',
-    },
-    second: {
-        id: 'second', name: '二诊', longName: '第二次诊断性考试', short: '二',
-        defaultStart: { year: 2027, month: 3, day: 23 },
-        defaultEnd: { year: 2027, month: 3, day: 25 },
-        desc: '第二次诊断性考试',
-    },
-    third: {
-        id: 'third', name: '三诊', longName: '第三次诊断性考试', short: '三',
-        defaultStart: { year: 2027, month: 4, day: 27 },
-        defaultEnd: { year: 2027, month: 4, day: 29 },
-        desc: '第三次诊断性考试',
-    },
-    final: {
-        id: 'final', name: '高考', longName: '全国统一高考', short: '终',
-        defaultStart: { year: 2027, month: 6, day: 7 },
-        defaultEnd: { year: 2027, month: 6, day: 10 },
-        desc: '全国统一高考',
-    },
-};
-
-const PHASE_ORDER = ['zero', 'first', 'second', 'third', 'final'];
+// PHASE_CONFIG / PHASE_ORDER 已移至 time.js（单一数据源）
+// 高考阶段日期由 GAOKAO_YEAR 推导，跨年自动跟随，不再硬编码。
 
 function loadPhaseSettings() {
     try {
         const saved = localStorage.getItem('gaokao_phase_settings');
         if (saved) phaseOverrides = JSON.parse(saved);
-    } catch (_) {}
+    } catch (_) {
+        phaseOverrides = {};
+    }
+    if (!phaseOverrides || typeof phaseOverrides !== 'object') phaseOverrides = {};
 }
 
 function savePhaseSettings() {
@@ -1108,27 +1097,64 @@ function savePhaseSettings() {
     } catch (_) {}
 }
 
+/** 校验一条覆盖数据是否合法（防止损坏的 localStorage 让页面崩掉） */
+function isSaneOverride(ov) {
+    if (!ov || typeof ov !== 'object') return false;
+    const keys = ['startYear', 'startMonth', 'startDay', 'endYear', 'endMonth', 'endDay'];
+    if (!keys.every(k => Number.isInteger(ov[k]))) return false;
+    const [minY, maxY] = [2020, 2100];
+    if (ov.startYear < minY || ov.startYear > maxY) return false;
+    if (ov.endYear < minY || ov.endYear > maxY) return false;
+    if (ov.startMonth < 1 || ov.startMonth > 12) return false;
+    if (ov.endMonth < 1 || ov.endMonth > 12) return false;
+    if (ov.startDay < 1 || ov.startDay > 31) return false;
+    if (ov.endDay < 1 || ov.endDay > 31) return false;
+    return bjDate(ov.endYear, ov.endMonth, ov.endDay) >= bjDate(ov.startYear, ov.startMonth, ov.startDay);
+}
+
+/** 取得某阶段的起止日期（用户覆盖优先，非法覆盖自动忽略并回退默认） */
 function getPhaseDates(phaseId) {
     const cfg = PHASE_CONFIG[phaseId];
     const ov = phaseOverrides[phaseId];
-    if (ov) {
-        return {
-            start: new Date(ov.startYear, ov.startMonth - 1, ov.startDay),
-            end: new Date(ov.endYear, ov.endMonth - 1, ov.endDay),
-        };
+    const use = isSaneOverride(ov) ? ov : null;
+
+    if (ov && !use && !isSaneOverride.warned?.[phaseId]) {
+        isSaneOverride.warned = isSaneOverride.warned || {};
+        isSaneOverride.warned[phaseId] = true;
+        console.warn('[gaokao] 忽略了非法的日期设置:', phaseId, ov);
     }
+
+    // 注意：默认值用 {year,month,day}，覆盖值用 {startYear,...,endDay}，两者字段名不同
+    const sy = use ? use.startYear : cfg.defaultStart.year;
+    const sm = use ? use.startMonth : cfg.defaultStart.month;
+    const sd = use ? use.startDay : cfg.defaultStart.day;
+    const ey = use ? use.endYear : cfg.defaultEnd.year;
+    const em = use ? use.endMonth : cfg.defaultEnd.month;
+    const ed = use ? use.endDay : cfg.defaultEnd.day;
+
     return {
-        start: new Date(cfg.defaultStart.year, cfg.defaultStart.month - 1, cfg.defaultStart.day),
-        end: new Date(cfg.defaultEnd.year, cfg.defaultEnd.month - 1, cfg.defaultEnd.day),
+        start: bjDate(sy, sm, sd),
+        end: bjDate(ey, em, ed),
     };
+}
+
+/** 阶段顺序自检（仅开发期提示，不影响渲染） */
+function assertPhaseOrder() {
+    let prevId = null;
+    for (const id of PHASE_ORDER) {
+        const t = getPhaseDates(id).start.getTime();
+        if (prevId !== null && t < prevId.at) {
+            console.warn('[gaokao] 阶段日期未按顺序递增:', prevId.id, '→', id);
+        }
+        prevId = { id, at: t };
+    }
 }
 
 function getPhaseStatus(phaseId) {
     const now = new Date();
     const { start, end } = getPhaseDates(phaseId);
-    if (now < start) return 'upcoming';
-    if (now > end) return 'done';
-    return 'ongoing';
+    return targetState(now, start, end) === 'waiting' ? 'upcoming'
+        : targetState(now, start, end) === 'ongoing' ? 'ongoing' : 'done';
 }
 
 // ---- 阶段导航 ----
@@ -1139,8 +1165,10 @@ function initPhaseNav() {
         const cfg = PHASE_CONFIG[id];
         const status = getPhaseStatus(id);
         const tab = document.createElement('button');
+        tab.type = 'button';
         tab.className = `phase-tab${status === 'done' ? ' done' : ''}${id === activePhaseId ? ' active' : ''}`;
         tab.dataset.phase = id;
+        tab.setAttribute('aria-pressed', String(id === activePhaseId));
         tab.innerHTML = `
             <span>${cfg.name}</span>
             <span class="pt-sub">${status === 'done' ? '已结束' : status === 'ongoing' ? '进行中' : cfg.short}</span>
@@ -1149,6 +1177,33 @@ function initPhaseNav() {
         tab.addEventListener('click', () => switchPhase(id));
         nav.appendChild(tab);
     });
+    lastPhaseStatusKey = PHASE_ORDER.map(id => getPhaseStatus(id)).join('|');
+}
+
+/** 阶段状态随时间翻转时同步导航徽章（每秒调用，状态未变则不触 DOM） */
+function syncPhaseNavStatus() {
+    const key = PHASE_ORDER.map(id => getPhaseStatus(id)).join('|');
+    if (key === lastPhaseStatusKey) return;
+    lastPhaseStatusKey = key;
+
+    document.querySelectorAll('.phase-tab').forEach(tab => {
+        const id = tab.dataset.phase;
+        const cfg = PHASE_CONFIG[id];
+        const status = getPhaseStatus(id);
+        tab.classList.toggle('done', status === 'done');
+        setText(tab.querySelector('.pt-sub'),
+            status === 'done' ? '已结束' : status === 'ongoing' ? '进行中' : cfg.short);
+
+        const hasBadge = !!tab.querySelector('.pt-badge');
+        if (status === 'done' && !hasBadge) {
+            const b = document.createElement('span');
+            b.className = 'pt-badge';
+            b.textContent = '✓';
+            tab.appendChild(b);
+        } else if (status !== 'done' && hasBadge) {
+            tab.querySelector('.pt-badge').remove();
+        }
+    });
 }
 
 function switchPhase(phaseId) {
@@ -1156,7 +1211,9 @@ function switchPhase(phaseId) {
     activePhaseId = phaseId;
 
     document.querySelectorAll('.phase-tab').forEach(tab => {
-        tab.classList.toggle('active', tab.dataset.phase === phaseId);
+        const on = tab.dataset.phase === phaseId;
+        tab.classList.toggle('active', on);
+        tab.setAttribute('aria-pressed', String(on));
     });
 
     const isFinal = phaseId === 'final';
@@ -1168,21 +1225,29 @@ function switchPhase(phaseId) {
     if (fsOverlay.classList.contains('open')) updateFullscreen();
 }
 
+/**
+ * Hero 倒计时唯一入口：
+ * - 高考阶段复用同一套推算（含用户自定义的高考日期）；
+ * - ongoing 类在此统一开关，接通原本永不触发的脉冲动画；
+ * - 已结束时给出明确文案，不再停在「距结束还有」。
+ */
 function updatePhaseHero() {
     const now = new Date();
     const cfg = PHASE_CONFIG[activePhaseId];
     const { start, end } = getPhaseDates(activePhaseId);
 
-    dom.yearBadge.textContent = COHORT_LABEL;
+    setText(dom.yearBadge, COHORT_LABEL);
+
+    let ongoing = false;
+    let label;
 
     if (now < start) {
         setHero(start - now, `距 ${cfg.name} 还有`);
-        dom.heroSection.classList.remove('ongoing');
-        dom.statusMsg.classList.remove('show');
+        label = 'waiting';
     } else if (now <= end) {
         setHero(end - now, `距 ${cfg.name} 结束还有`);
-        dom.heroSection.classList.add('ongoing');
-        dom.statusMsg.classList.remove('show');
+        ongoing = true;
+        label = 'ongoing';
     } else {
         const nextPhase = PHASE_ORDER.find(id => getPhaseDates(id).start > now);
         if (nextPhase) {
@@ -1190,8 +1255,20 @@ function updatePhaseHero() {
         } else {
             setHero(0, '所有考试已结束 · 金榜题名');
         }
-        dom.heroSection.classList.remove('ongoing');
-        dom.statusMsg.classList.remove('show');
+        label = 'done';
+    }
+
+    dom.heroSection.classList.toggle('ongoing', ongoing);
+    // 仅高考进行中显示状态横幅
+    dom.statusMsg.classList.toggle('show', ongoing && activePhaseId === 'final');
+
+    // 读屏播报（分钟级变化才更新）
+    const a11yKey = `${label}|${dom.hDays.textContent}-${dom.hHours.textContent}-${dom.hMins.textContent}`;
+    if (a11yKey !== lastA11yKey) {
+        lastA11yKey = a11yKey;
+        setText(dom.heroA11y,
+            `${dom.heroLabel.textContent} ${dom.hDays.textContent} 天 ` +
+            `${dom.hHours.textContent} 小时 ${dom.hMins.textContent} 分`);
     }
 }
 
@@ -1204,12 +1281,11 @@ function updatePhaseDetail() {
     const status = getPhaseStatus(activePhaseId);
     const now = new Date();
 
-    document.getElementById('pdName').textContent = cfg.longName || cfg.name;
+    setText(document.getElementById('pdName'), cfg.longName || cfg.name);
 
-    const fmtOpt = { year: 'numeric', month: 'long', day: 'numeric' };
-    const startStr = start.toLocaleDateString('zh-CN', fmtOpt);
-    const endStr = end.toLocaleDateString('zh-CN', { month: 'long', day: 'numeric' });
-    document.getElementById('pdDateRange').textContent = `${startStr} - ${endStr}`;
+    const startStr = fmtCnFull(start);
+    const endStr = fmtCnMonthDay(end);
+    setText(document.getElementById('pdDateRange'), `${startStr} - ${endStr}`);
 
     const badge = document.getElementById('pdBadge');
     badge.className = 'pd-status-badge';
@@ -1229,14 +1305,15 @@ function updatePhaseDetail() {
     else if (now <= end) { diff = end - now; label = '距结束还有'; }
     else { diff = 0; label = '已结束'; }
 
-    document.getElementById('pdDays').textContent = pad2(Math.floor(diff / 86400000));
-    document.getElementById('pdHours').textContent = pad2(Math.floor((diff % 86400000) / 3600000));
-    document.getElementById('pdMins').textContent = pad2(Math.floor((diff % 3600000) / 60000));
-    document.getElementById('pdSecs').textContent = pad2(Math.floor((diff % 60000) / 1000));
-    document.getElementById('pdDesc').textContent = label;
+    const p = splitDuration(diff);
+    setText(document.getElementById('pdDays'), pad2(p.d));
+    setText(document.getElementById('pdHours'), pad2(p.h));
+    setText(document.getElementById('pdMins'), pad2(p.m));
+    setText(document.getElementById('pdSecs'), pad2(p.s));
+    setText(document.getElementById('pdDesc'), label);
 
-    const pdTimer = detail.querySelector('.pd-timer');
-    pdTimer.style.animation = status === 'ongoing' ? 'pulseSoft 1.5s ease-in-out infinite' : '';
+    // 脉冲动画改由 CSS 类驱动（见 style.css 的 .phase-detail.ongoing）
+    detail.classList.toggle('ongoing', status === 'ongoing');
 }
 
 // ---- 自定义日历选择器 ----
@@ -1246,32 +1323,49 @@ function openCalendar(trigger) {
     closeCalendar();
     const year = parseInt(trigger.dataset.year);
     const month = parseInt(trigger.dataset.month);
-    calState = { trigger, year, month };
+    const day = parseInt(trigger.dataset.day) || 1;
+    calState = { trigger, year, month, day };
     trigger.classList.add('active');
+    trigger.setAttribute('aria-expanded', 'true');
     renderCalendar(year, month);
     positionCalendar(trigger);
-    document.getElementById('calPopup').classList.add('open');
+    const popup = document.getElementById('calPopup');
+    popup.classList.add('open');
+    popup.setAttribute('aria-hidden', 'false');
+    focusSelectedDay();
 }
 
 function closeCalendar() {
     if (calState) {
         calState.trigger.classList.remove('active');
+        calState.trigger.setAttribute('aria-expanded', 'false');
         calState = null;
     }
-    document.getElementById('calPopup').classList.remove('open');
+    const popup = document.getElementById('calPopup');
+    popup.classList.remove('open');
+    popup.setAttribute('aria-hidden', 'true');
+}
+
+/** 把焦点移到当前选中的日期格，便于键盘操作 */
+function focusSelectedDay() {
+    const sel = document.querySelector('#calDays .cal-day.selected')
+        || document.querySelector('#calDays .cal-day:not(.other-month)');
+    if (sel) sel.focus();
 }
 
 function positionCalendar(trigger) {
     const rect = trigger.getBoundingClientRect();
     const popup = document.getElementById('calPopup');
+    const pw = popup.offsetWidth || 272;
+    const ph = popup.offsetHeight || 300;
     let top = rect.bottom + 6;
     let left = rect.left;
 
-    if (left + 272 > window.innerWidth) {
-        left = window.innerWidth - 272;
+    if (left + pw > window.innerWidth) {
+        left = window.innerWidth - pw;
     }
-    if (top + 300 > window.innerHeight) {
-        top = rect.top - 300;
+    if (top + ph > window.innerHeight) {
+        top = rect.top - ph;
     }
     popup.style.top = Math.max(4, top) + 'px';
     popup.style.left = Math.max(4, left) + 'px';
@@ -1291,13 +1385,15 @@ function renderCalendar(year, month) {
 
     const totalDays = lastDay.getDate();
     const prevTotal = prevLastDay.getDate();
-    const today = new Date();
-    const todayStr = `${today.getFullYear()}-${today.getMonth()+1}-${today.getDate()}`;
 
-    const selYear = calState ? parseInt(calState.trigger.dataset.year) : year;
-    const selMonth = calState ? parseInt(calState.trigger.dataset.month) : month;
-    const selDay = calState ? parseInt(calState.trigger.dataset.day) : 1;
-    const selStr = `${selYear}-${selMonth}-${selDay}`;
+    // 统一补零比较，避免依赖「数字未补零」的巧合
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${pad2(today.getMonth() + 1)}-${pad2(today.getDate())}`;
+
+    const selYear = calState ? calState.year : year;
+    const selMonth = calState ? calState.month : month;
+    const selDay = calState ? calState.day : 1;
+    const selStr = `${selYear}-${pad2(selMonth)}-${pad2(selDay)}`;
 
     const cells = [];
 
@@ -1314,13 +1410,18 @@ function renderCalendar(year, month) {
 
     cells.forEach(cell => {
         const btn = document.createElement('button');
+        btn.type = 'button';
         btn.className = 'cal-day';
         btn.textContent = cell.day;
         if (cell.other) btn.classList.add('other-month');
 
-        const dStr = `${year}-${month}-${cell.day}`;
+        const dStr = `${year}-${pad2(month)}-${pad2(cell.day)}`;
         if (dStr === todayStr) btn.classList.add('today');
         if (!cell.other && dStr === selStr) btn.classList.add('selected');
+
+        btn.setAttribute('aria-label', `${year}年${month}月${cell.day}日`);
+        if (dStr === todayStr) btn.setAttribute('aria-current', 'date');
+        if (!cell.other && dStr === selStr) btn.setAttribute('aria-pressed', 'true');
 
         btn.addEventListener('click', () => selectDay(cell.day));
         daysContainer.appendChild(btn);
@@ -1333,20 +1434,52 @@ function selectDay(day) {
     trigger.dataset.year = year;
     trigger.dataset.month = month;
     trigger.dataset.day = day;
-    trigger.querySelector('.dp-value').textContent = `${year}年${month}月${day}日`;
+    setText(trigger.querySelector('.dp-value'), `${year}年${month}月${day}日`);
+    const focusTarget = trigger;
     closeCalendar();
+    if (focusTarget && focusTarget.focus) focusTarget.focus();
 }
 
 function goMonth(delta) {
     if (!calState) return;
-    let newMonth = calState.month + delta;
-    let newYear = calState.year;
-    if (newMonth > 12) { newMonth = 1; newYear += 1; }
-    else if (newMonth < 1) { newMonth = 12; newYear -= 1; }
+    // 先按自然月推进，再分别处理跨年（原实现用 if/else 链，易漏分支）
+    const total = calState.year * 12 + (calState.month - 1) + delta;
+    const newYear = Math.floor(total / 12);
+    const newMonth = (total % 12 + 12) % 12 + 1;
+
     calState.year = newYear;
     calState.month = newMonth;
+    calState.day = 1;
     renderCalendar(calState.year, calState.month);
     positionCalendar(calState.trigger);
+    focusSelectedDay();
+}
+
+/** 日历弹窗内的键盘导航：方向键移动、Enter/Space 确认、Esc 关闭 */
+function handleCalendarKeydown(e) {
+    if (!calState) return;
+
+    if (e.key === 'Escape') {
+        const t = calState.trigger;
+        closeCalendar();
+        if (t && t.focus) t.focus();
+        return;
+    }
+
+    const delta = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 }[e.key];
+    if (!delta) return;
+    e.preventDefault();
+
+    // 以北京时间基准做整日推进，避免本地时区/夏令时干扰
+    const base = bjDate(calState.year, calState.month, calState.day);
+    const moved = addDays(base, delta);
+    const t = new Date(moved.getTime() + CN_OFFSET_MIN * 60000);
+
+    calState.year = t.getUTCFullYear();
+    calState.month = t.getUTCMonth() + 1;
+    calState.day = t.getUTCDate();
+    renderCalendar(calState.year, calState.month);
+    focusSelectedDay();
 }
 
 function initCalendar() {
@@ -1364,6 +1497,19 @@ function initCalendar() {
             }
         }
     });
+
+    // 键盘可达：Enter / Space / 方向键打开日历
+    document.getElementById('settingsForm').addEventListener('keydown', (e) => {
+        const trigger = e.target.closest('.dp-trigger');
+        if (!trigger) return;
+        if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
+            e.preventDefault();
+            if (calState && calState.trigger === trigger) closeCalendar();
+            else openCalendar(trigger);
+        }
+    });
+
+    document.getElementById('calPopup').addEventListener('keydown', handleCalendarKeydown);
 
     document.addEventListener('click', (e) => {
         if (!calState) return;
@@ -1388,34 +1534,34 @@ function renderSettingsForm() {
 
     PHASE_ORDER.forEach(id => {
         const cfg = PHASE_CONFIG[id];
-        const ov = phaseOverrides[id];
-        const sy = ov ? ov.startYear : cfg.defaultStart.year;
-        const sm = ov ? ov.startMonth : cfg.defaultStart.month;
-        const sd = ov ? ov.startDay : cfg.defaultStart.day;
-        const ey = ov ? ov.endYear : cfg.defaultEnd.year;
-        const em = ov ? ov.endMonth : cfg.defaultEnd.month;
-        const ed = ov ? ov.endDay : cfg.defaultEnd.day;
+        // 一律展示「当前生效」的日期（默认或用户覆盖），避免改了没用／显示不一致
+        const { start, end } = getPhaseDates(id);
+        const t = (d) => new Date(d.getTime() + CN_OFFSET_MIN * 60000);
+        const sy = t(start).getUTCFullYear(), sm = t(start).getUTCMonth() + 1, sd = t(start).getUTCDate();
+        const ey = t(end).getUTCFullYear(), em = t(end).getUTCMonth() + 1, ed = t(end).getUTCDate();
 
         const fmt = (y, m, d) => `${y}年${m}月${d}日`;
 
         const div = document.createElement('div');
         div.className = 'sm-phase';
         div.innerHTML = `
-            <div class="sm-phase-name">${cfg.name}</div>
+            <div class="sm-phase-name">${cfg.name}${id === 'final' ? '<span class="sm-note">· 与科目日程联动</span>' : ''}</div>
             <div class="sm-date-row" style="margin-bottom:6px;">
-                <div class="dp-trigger" data-phase="${id}" data-type="start"
+                <div class="dp-trigger" data-phase="${id}" data-type="start" role="button"
+                     aria-haspopup="dialog" aria-expanded="false"
                      data-year="${sy}" data-month="${sm}" data-day="${sd}" tabindex="0">
                     <span class="dp-label">开始</span>
                     <span class="dp-value">${fmt(sy, sm, sd)}</span>
-                    <span class="dp-arrow">▾</span>
+                    <span class="dp-arrow" aria-hidden="true">▾</span>
                 </div>
             </div>
             <div class="sm-date-row">
-                <div class="dp-trigger" data-phase="${id}" data-type="end"
+                <div class="dp-trigger" data-phase="${id}" data-type="end" role="button"
+                     aria-haspopup="dialog" aria-expanded="false"
                      data-year="${ey}" data-month="${em}" data-day="${ed}" tabindex="0">
                     <span class="dp-label">结束</span>
                     <span class="dp-value">${fmt(ey, em, ed)}</span>
-                    <span class="dp-arrow">▾</span>
+                    <span class="dp-arrow" aria-hidden="true">▾</span>
                 </div>
             </div>
         `;
@@ -1424,19 +1570,59 @@ function renderSettingsForm() {
 
     const resetDiv = document.createElement('div');
     resetDiv.style.cssText = 'text-align:center;margin-top:14px;';
-    resetDiv.innerHTML = '<button class="sm-reset-btn" id="settingsReset">↻ 恢复默认</button>';
+    const resetBtn = document.createElement('button');
+    resetBtn.type = 'button';
+    resetBtn.className = 'sm-reset-btn';
+    resetBtn.id = 'settingsReset';
+    resetBtn.textContent = '↻ 恢复默认';
+    // 直接绑定，不再依赖事件委托（原实现会在重建 DOM 后变得脆弱）
+    resetBtn.addEventListener('click', resetSettings);
+    resetDiv.appendChild(resetBtn);
     form.appendChild(resetDiv);
 }
 
+// ---- 弹窗焦点管理 ----
+let lastFocusedBeforeModal = null;
+
+const FOCUSABLE = 'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+
+function trapFocus(e) {
+    if (e.key === 'Escape') { closeSettings(); return; }
+    if (e.key !== 'Tab') return;
+    const modal = document.getElementById('settingsModal');
+    const items = Array.from(modal.querySelectorAll(FOCUSABLE))
+        .filter(el => el.offsetParent !== null || el === document.activeElement);
+    if (!items.length) return;
+    const first = items[0], last = items[items.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault(); last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault(); first.focus();
+    }
+}
+
 function openSettings() {
+    lastFocusedBeforeModal = document.activeElement;
     renderSettingsForm();
-    document.getElementById('settingsModal').classList.add('open');
+    const modal = document.getElementById('settingsModal');
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
     lockScroll(true);
+    const first = modal.querySelector(FOCUSABLE);
+    if (first) first.focus();
+    document.addEventListener('keydown', trapFocus);
 }
 
 function closeSettings() {
-    document.getElementById('settingsModal').classList.remove('open');
+    const modal = document.getElementById('settingsModal');
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden', 'true');
     lockScroll(false);
+    document.removeEventListener('keydown', trapFocus);
+    if (lastFocusedBeforeModal && lastFocusedBeforeModal.focus) {
+        lastFocusedBeforeModal.focus();
+    }
+    lastFocusedBeforeModal = null;
 }
 
 function saveSettings() {
@@ -1444,7 +1630,7 @@ function saveSettings() {
     document.querySelectorAll('.dp-trigger[data-type="start"]').forEach(el => {
         const pid = el.dataset.phase;
         const endEl = document.querySelector(`.dp-trigger[data-type="end"][data-phase="${pid}"]`);
-        if (!newOverrides[pid]) newOverrides[pid] = {};
+        if (!endEl) return;
         newOverrides[pid] = {
             startYear: parseInt(el.dataset.year), startMonth: parseInt(el.dataset.month), startDay: parseInt(el.dataset.day),
             endYear: parseInt(endEl.dataset.year), endMonth: parseInt(endEl.dataset.month), endDay: parseInt(endEl.dataset.day),
@@ -1457,6 +1643,10 @@ function saveSettings() {
 }
 
 function refreshPhaseUI() {
+    // 高考日期可能已变化 → 科目时间跟随平移
+    examDates = computeExamDates();
+    assertPhaseOrder();
+
     document.getElementById('phaseNav').innerHTML = '';
     initPhaseNav();
     switchPhase(activePhaseId);
@@ -1467,6 +1657,8 @@ function resetSettings() {
     phaseOverrides = {};
     savePhaseSettings();
     renderSettingsForm();
+    // 立即生效，不再要求用户额外点一次「保存」
+    refreshPhaseUI();
 }
 
 // ---- 绑定设置事件 ----
@@ -1476,20 +1668,69 @@ document.getElementById('settingsSave').addEventListener('click', saveSettings);
 document.getElementById('settingsModal').addEventListener('click', (e) => {
     if (e.target === e.currentTarget) closeSettings();
 });
-document.getElementById('settingsForm').addEventListener('click', (e) => {
-    if (e.target.id === 'settingsReset') resetSettings();
-});
+
+// ---- 版本号单一来源 ----
+setText(document.getElementById('versionLabel'), APP_VERSION);
 
 // ---- v2.0.0 初始化 ----
-loadPhaseSettings();
 initPhaseNav();
 initCalendar();
+assertPhaseOrder();
 switchPhase('final');
 updatePhaseHero();
 
-// ---- Service Worker 注册 ----
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js').catch(() => {});
-    });
+// ---- Service Worker 注册（带新版本提示） ----
+// 版本号作为查询串传给 sw.js，使其缓存名随版本变化，
+// 从而在部署新版本后自动触发更新（不再需要手工改缓存名）。
+//
+// 仅在 http/https 下注册：file:// 打开时浏览器把页面视为非安全上下文，
+// register() 必然失败（SecurityError / NotSupportedError）。
+// 之前只在 .catch 里吞掉异常，会在控制台留下刺眼的红色报错，
+// 且带 URL 查询串的 sw.js 在 file:// 下更易被当成缺失文件。
+(function tryRegisterServiceWorker() {
+    // 先看协议：file:// 直接跳过，连 navigator.serviceWorker 都不去碰
+    // （部分浏览器在 file:// 下读取该属性本身就会抛 SecurityError）
+    const isHttp = location.protocol === 'http:' || location.protocol === 'https:';
+    if (!isHttp) {
+        console.info('[gaokao] 当前以 file:// 打开，已跳过 Service Worker 注册。' +
+            '离线缓存与「安装到桌面」需通过 http/https 访问；' +
+            '本地预览可在 gaokao 的上级目录执行 python -m http.server 8080。');
+        return;
+    }
+
+    try {
+        if (!('serviceWorker' in navigator) || window.isSecureContext === false) return;
+
+        window.addEventListener('load', () => {
+            navigator.serviceWorker
+                .register(`./sw.js?v=${encodeURIComponent(APP_VERSION)}`)
+                .then((reg) => {
+                    const watch = (worker) => {
+                        if (!worker) return;
+                        worker.addEventListener('statechange', () => {
+                            if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+                                showUpdateHint();
+                            }
+                        });
+                    };
+                    if (reg.waiting) watch(reg.waiting);
+                    reg.addEventListener('updatefound', () => watch(reg.installing));
+                })
+                .catch((e) => console.warn('[gaokao] Service Worker 注册失败:', e));
+        });
+    } catch (e) {
+        console.info('[gaokao] 当前环境不支持 Service Worker，已跳过:', e && e.name);
+    }
+})();
+
+function showUpdateHint() {
+    if (document.getElementById('swUpdateBar')) return;
+    const bar = document.createElement('button');
+    bar.type = 'button';
+    bar.id = 'swUpdateBar';
+    bar.className = 'sw-update-bar';
+    bar.setAttribute('role', 'status');
+    bar.textContent = '有新版本可用，点击刷新';
+    bar.addEventListener('click', () => location.reload());
+    document.body.appendChild(bar);
 }
