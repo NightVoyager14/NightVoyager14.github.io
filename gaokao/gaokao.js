@@ -238,13 +238,14 @@ function applySubjectHighlight() {
         if (matched) {
             card.classList.add('subject-selected');
             const badge = document.createElement('span');
-            badge.className = 'sel-badge';
+            // 带上状态类：徽章样式不必再依赖祖先选择器去猜是「已选」还是「未选」
+            badge.className = 'sel-badge sel-badge--on';
             badge.textContent = '已选';
             if (countdownEl) countdownEl.before(badge);
         } else if (isElective && hasSelection) {
             card.classList.add('subject-dimmed');
             const badge = document.createElement('span');
-            badge.className = 'sel-badge';
+            badge.className = 'sel-badge sel-badge--off';
             badge.textContent = '未选';
             if (countdownEl) countdownEl.before(badge);
         }
@@ -305,11 +306,13 @@ function render() {
                 : `${durationMin}分钟`;
 
             card.innerHTML = `
-                <span class="name">${ex.name}</span>
-                <span class="meta">
-                    <span class="time-range">${startH}:${startM} – ${endH}:${endM}</span>
-                    <span class="tag ${tagClasses[ex.tag]}">${tagLabels[ex.tag]}</span>
-                    <span class="dur-note">${durStr}</span>
+                <span class="exam-main">
+                    <span class="name">${ex.name}</span>
+                    <span class="meta">
+                        <span class="time-range">${startH}:${startM} – ${endH}:${endM}</span>
+                        <span class="tag ${tagClasses[ex.tag]}">${tagLabels[ex.tag]}</span>
+                        <span class="dur-note">${durStr}</span>
+                    </span>
                 </span>
                 <span class="countdown-mini" id="cd-${ex.date}-${ex.name.replace(/[\/\s]/g,'')}">
                     <span class="cd-num" id="cd-d-${ex.date}-${ex.name.replace(/[\/\s]/g,'')}">--</span><span class="cd-unit">天</span>
@@ -338,6 +341,38 @@ function render() {
 // 渲染页面 + 初始化选科
 render();
 initSubjectSelector();
+
+/* v2.1.0：给各区块加实色页眉，作为整卡的色块起点。
+   只在这里插入一次；之后由 updateAll 增量更新其中的文字，
+   避免每秒重建 DOM（原实现正是靠 cacheDom 的引用做增量更新）。 */
+(function initCardBands() {
+    // 当前考试进程：页眉文字由 updateAll 更新
+    const ce = document.getElementById('currentExam');
+    if (ce && !ce.querySelector('.card-band')) {
+        const band = document.createElement('div');
+        band.className = 'card-band';
+        band.innerHTML = '<span id="ceBandTitle">当前考试</span>' +
+                         '<span class="cb-note" id="ceBandNote">—</span>';
+        ce.prepend(band);
+    }
+    // 选科：静态页眉
+    const ss = document.getElementById('subjectSelector');
+    if (ss && !ss.querySelector('.card-band')) {
+        const band = document.createElement('div');
+        band.className = 'card-band';
+        band.innerHTML = '<span>我的选科</span>' +
+                         '<span class="cb-note" id="ssBandNote">点击标记</span>';
+        ss.prepend(band);
+    }
+    // 日程卡：页眉已在 index.html 中静态写好，这里只同步场次提示，
+    // 并隐藏卡内那行重复的标题（页眉已经说了「考试日程」）
+    const note = document.getElementById('scheduleBandNote');
+    if (note) setText(note, exams.length + ' 场 · 4 天');
+    const root = document.getElementById('scheduleRoot');
+    const dupTitle = root && root.parentElement
+        ? root.parentElement.querySelector('.section-title') : null;
+    if (dupTitle) dupTitle.style.display = 'none';
+})();
 
 // 缓存 DOM（此时卡片已存在）
 cacheDom();
@@ -553,6 +588,7 @@ function updateAll(force) {
         ceBadge.className = 'ce-status-badge ce-ongoing';
         ceName.textContent = current.name;
         ceTime.textContent = `${sh}:${sm} ~ ${eh}:${em}`;
+        setText(document.getElementById('ceBandNote'), `${current.name} ${sh}:${sm}–${eh}:${em}`);
         const rh = Math.floor(remain / 3600000);
         const rm = Math.floor((remain % 3600000) / 60000);
         const rs = Math.floor((remain % 60000) / 1000);
@@ -576,6 +612,7 @@ function updateAll(force) {
         ceBadge.className = 'ce-status-badge ce-upcoming';
         ceName.textContent = next.name;
         ceTime.textContent = `${sh}:${sm} ~ ${eh}:${em}`;
+        setText(document.getElementById('ceBandNote'), `下一场 ${next.name} ${sh}:${sm}`);
         ceCountdown.textContent = d > 0
             ? `${d}天 ${pad2(h)}:${pad2(m)}:${pad2(s_)}`
             : `${pad2(h)}:${pad2(m)}:${pad2(s_)}`;
@@ -590,6 +627,7 @@ function updateAll(force) {
         ceBadge.className = 'ce-status-badge ce-done';
         ceName.textContent = '所有考试已结束';
         ceTime.textContent = '—';
+        setText(document.getElementById('ceBandNote'), '已全部完成');
         ceCountdown.textContent = '—';
         ceFill.style.width = '100%';
         ceStart.textContent = '全部完成';
@@ -627,46 +665,290 @@ function tickLoop(time) {
 requestAnimationFrame(tickLoop);
 
 // ============================================================
-//  主题切换
+//  主题切换（v2.1.0：多主题 + 字号档 + 明暗三态）
+//  ------------------------------------------------------------
+//  维度彼此独立，互不覆盖：
+//    data-theme  配色主题（ink / night / board / celadon / camp）
+//    data-size   字号档（std / lg / xl）—— 供投屏/大屏使用
+//    gaokao_appearance  明暗：auto 跟随系统 / light / dark
+//
+//  存储兼容：旧版只有一个 gaokao_theme（'dark' | 'light'）。
+//  v2.1.0 起拆成 gaokao_theme_id + gaokao_appearance，
+//  读取时若发现旧键会平滑迁移，老用户设置不丢。
 // ============================================================
 
-const themeToggle = document.getElementById('themeToggle');
+const THEMES = [
+    { id: 'ink',     name: '砚台', dots: ['#F5F1EA', '#FFFDFA', '#B5722E'] },
+    { id: 'night',   name: '夜航', dots: ['#0E1116', '#161B22', '#F0B357'] },
+    { id: 'board',   name: '白板', dots: ['#FFFFFF', '#F2F3F5', '#D0322B'] },
+    { id: 'celadon', name: '青瓷', dots: ['#F2F5F4', '#FFFFFF', '#0F6E68'] },
+    { id: 'camp',    name: '露营', dots: ['#FFF6E9', '#E8892B', '#5FB7D4'] }
+];
+const THEME_IDS = THEMES.map(t => t.id);
+const DEFAULT_THEME = 'ink';
 
-function syncThemeButton() {
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    setText(themeToggle, isDark ? '深色 →' : '浅色 →');
-    themeToggle.setAttribute('aria-pressed', String(isDark));
-    themeToggle.title = isDark ? '当前深色，点击切换为浅色' : '当前浅色，点击切换为深色';
+/* 每套主题自带的明暗身份。
+   这一点很关键：如果「明暗」与「配色」可以自由交叉，就会出现
+   「深色 + 砚台（暖纸）」这种自相矛盾、或「浅色 + 夜航」几乎不可读的组合。
+   所以明暗档本质是「在浅色主题与深色主题之间切换」，
+   每套配色都声明自己属于哪一侧。 */
+const THEME_DARK = { night: true, ink: false, board: false, celadon: false, camp: false };
+
+const SIZES = [
+    { id: 'std', name: '标准' },
+    { id: 'lg',  name: '大' },
+    { id: 'xl',  name: '超大' }
+];
+const SIZE_IDS = SIZES.map(s => s.id);
+
+const APPEARANCES = [
+    { id: 'auto',  name: '自动' },
+    { id: 'light', name: '浅色' },
+    { id: 'dark',  name: '深色' }
+];
+
+const themeToggle = document.getElementById('themeToggle');
+const themeMenu = document.getElementById('themeMenu');
+
+/* appliedThemeId 是唯一真相来源：它既是实际生效的配色，
+   也是「再切换到明暗档时」所依据的那个配色。
+   之前用 themeId（用户意图）参与推导，会出现
+   「themeId=ink 但 applied=night，于是永远推不出 ink」的死锁。 */
+let appliedThemeId = DEFAULT_THEME;
+let autoPairThemeId = null;      // 「自动」模式下，系统为浅色时使用的配色
+let sizeId = 'std';
+let appearance = 'auto';         // auto | light | dark（仅用于菜单回显）
+
+function readStored(key) {
+    try { return localStorage.getItem(key); } catch (_) { return null; }
+}
+function writeStored(key, value) {
+    try { localStorage.setItem(key, value); } catch (_) {}
+}
+
+/** 系统当前是否偏好暗色 */
+function systemPrefersDark() {
+    try {
+        return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    } catch (_) { return false; }
+}
+
+/** 由「明暗档 + 当前生效配色」解出目标配色。
+    明暗档只决定「去浅色侧还是深色侧」，不再另存一套意图配色，
+    从根上避免意图与结果分叉。 */
+function targetThemeId() {
+    if (appearance === 'auto') {
+        return systemPrefersDark() ? 'night' : (autoPairThemeId || DEFAULT_THEME);
+    }
+    if (appearance === 'dark') return 'night';
+    return autoPairThemeId || DEFAULT_THEME;
 }
 
 function loadTheme() {
-    try {
-        const saved = localStorage.getItem('gaokao_theme');
-        if (saved === 'dark') {
-            document.documentElement.setAttribute('data-theme', 'dark');
-            syncThemeButton();
-            return;
-        }
-    } catch (_) {}
-    document.documentElement.removeAttribute('data-theme');
-    syncThemeButton();
-}
+    // 新键优先
+    let id = readStored('gaokao_theme_id');
+    let ap = readStored('gaokao_appearance');
+    const legacy = readStored('gaokao_theme');
 
-function toggleTheme() {
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    if (isDark) {
-        document.documentElement.removeAttribute('data-theme');
-        try { localStorage.setItem('gaokao_theme', 'light'); } catch (_) {}
-    } else {
-        document.documentElement.setAttribute('data-theme', 'dark');
-        try { localStorage.setItem('gaokao_theme', 'dark'); } catch (_) {}
+    /* 旧键迁移：v2.0.x 只有 gaokao_theme（'dark' | 'light'）。
+       必须把 'dark' 映射到深色主题（night），否则老用户升级后会
+       从深色界面突然变成浅色的「砚台」—— 这是可见的体验倒退。 */
+    if (!id && !ap && (legacy === 'dark' || legacy === 'light')) {
+        ap = legacy;
+        id = legacy === 'dark' ? 'night' : DEFAULT_THEME;
+        writeStored('gaokao_appearance', ap);
+        writeStored('gaokao_theme_id', id);
     }
-    syncThemeButton();
-    if (fsOverlay.classList.contains('open')) updateFullscreen();
+
+    if (id && THEME_IDS.indexOf(id) >= 0) appliedThemeId = id;
+    if (ap && APPEARANCES.some(a => a.id === ap)) appearance = ap;
+
+    // 浅色侧记忆：只在当前生效的是浅色主题时更新
+    const pair = readStored('gaokao_pair_theme_id');
+    if (pair && THEME_IDS.indexOf(pair) >= 0) autoPairThemeId = pair;
+    else if (!THEME_DARK[appliedThemeId]) autoPairThemeId = appliedThemeId;
 }
 
-themeToggle.addEventListener('click', toggleTheme);
+function applyTheme() {
+    document.documentElement.setAttribute('data-theme', appliedThemeId);
+    document.documentElement.setAttribute('data-size', sizeId);
+    syncThemeUI();
+    refreshThemeConsumers();
+}
+
+/** 全屏层与 PiP 的主题色是运行时读取计算样式的，切换后必须重算。
+    这两个变量的声明在本文件中位于主题段落之后，直接引用会命中暂时性死区，
+    所以用 typeof 守卫；首屏由文末的 applyTheme() 负责。 */
+function refreshThemeConsumers() {
+    if (typeof fsOverlay !== 'undefined' && fsOverlay &&
+        fsOverlay.classList.contains('open')) {
+        updateFullscreen();
+    }
+    if (typeof pipWindow !== 'undefined' && pipWindow && !pipWindow.closed) {
+        updatePipContent();
+    }
+}
+
+/** 同步菜单选中态与按钮文案 */
+function syncThemeUI() {
+    if (!themeToggle) return;
+    const applied = THEMES.filter(t => t.id === appliedThemeId)[0] || THEMES[0];
+    const size = SIZES.filter(s => s.id === sizeId)[0] || SIZES[0];
+    const apName = (APPEARANCES.filter(a => a.id === appearance)[0] || APPEARANCES[0]).name;
+    // 显示「实际生效」的配色，避免出现「按钮写砚台、界面却是夜航」的错位
+    setText(themeToggle, '主题 · ' + applied.name);
+    themeToggle.title = '配色 ' + applied.name + ' · 字号 ' + size.name + ' · ' + apName;
+    themeToggle.setAttribute('aria-expanded', String(themeMenu && themeMenu.classList.contains('open')));
+
+    if (!themeMenu) return;
+    themeMenu.querySelectorAll('[data-theme-id]').forEach(el => {
+        el.setAttribute('aria-pressed', String(el.dataset.themeId === appliedThemeId));
+    });
+    themeMenu.querySelectorAll('[data-size-id]').forEach(el => {
+        el.setAttribute('aria-pressed', String(el.dataset.sizeId === sizeId));
+    });
+    themeMenu.querySelectorAll('[data-appearance]').forEach(el => {
+        const isDarkNow = !!THEME_DARK[appliedThemeId];
+        // 回显的是实际状态：当前在深色侧就点亮「深色」，否则点亮「浅色」
+        const on = appearance === 'auto'
+            ? el.dataset.appearance === 'auto'
+            : (isDarkNow ? el.dataset.appearance === 'dark'
+                         : el.dataset.appearance === 'light');
+        el.setAttribute('aria-pressed', String(on));
+    });}
+
+function renderThemeMenu() {
+    if (!themeMenu) return;
+    const swatch = (t) =>
+        '<button type="button" class="tm-swatch" data-theme-id="' + t.id + '" aria-pressed="false">' +
+        '<span class="dots" aria-hidden="true">' +
+        t.dots.map(c => '<i style="background:' + c + '"></i>').join('') +
+        '</span>' + t.name + '</button>';
+
+    themeMenu.innerHTML =
+        '<div class="tm-head">' +
+        '<span class="tm-title">外观</span>' +
+        '<button type="button" class="tm-close" id="themeMenuClose" aria-label="关闭外观设置">✕</button>' +
+        '</div>' +
+
+        '<div class="tm-group"><span class="tm-label">配色</span>' +
+        '<div class="tm-grid">' + THEMES.map(swatch).join('') + '</div></div>' +
+
+        '<div class="tm-group"><span class="tm-label">字号（投屏 / 大屏）</span>' +
+        '<div class="tm-grid cols-3">' +
+        SIZES.map(s => '<button type="button" class="tm-swatch" data-size-id="' + s.id +
+            '" aria-pressed="false">' + s.name + '</button>').join('') +
+        '</div></div>' +
+
+        '<div class="tm-group"><span class="tm-label">明暗</span>' +
+        '<div class="tm-grid cols-3">' +
+        APPEARANCES.map(a => '<button type="button" class="tm-swatch" data-appearance="' + a.id +
+            '" aria-pressed="false">' + a.name + '</button>').join('') +
+        '</div>' +
+        '<p class="tm-hint">「自动」跟随系统偏好：白天用你选的配色，' +
+        '夜间自动切到深色主题。</p></div>';
+
+    themeMenu.addEventListener('click', (e) => {
+        const t = e.target.closest('[data-theme-id]');
+        const s = e.target.closest('[data-size-id]');
+        const a = e.target.closest('[data-appearance]');
+
+        if (t) {
+            /* 点配色 = 直接采用该配色，并让明暗档与之保持一致。
+               这是本次修复的核心：以前「明暗」一旦被设成 dark，
+               就会把之后选的所有配色都强制成 night，用户看不到任何变化。 */
+            appliedThemeId = t.dataset.themeId;
+            appearance = THEME_DARK[appliedThemeId] ? 'dark' : 'light';
+            if (!THEME_DARK[appliedThemeId]) autoPairThemeId = appliedThemeId;
+            writeStored('gaokao_theme_id', appliedThemeId);
+            writeStored('gaokao_appearance', appearance);
+            if (autoPairThemeId) writeStored('gaokao_pair_theme_id', autoPairThemeId);
+            applyTheme();
+        } else if (s) {
+            sizeId = s.dataset.sizeId;
+            writeStored('gaokao_size', sizeId);
+            applyTheme();
+        } else if (a) {
+            appearance = a.dataset.appearance;
+            writeStored('gaokao_appearance', appearance);
+            // 明暗档只决定去浅色侧还是深色侧，具体用哪套配色由记忆决定
+            appliedThemeId = targetThemeId();
+            writeStored('gaokao_theme_id', appliedThemeId);
+            applyTheme();
+        }
+    });
+    themeMenu.querySelector('#themeMenuClose').addEventListener('click', closeThemeMenu);
+}
+
+/** 菜单定位：贴住触发按钮，越界时自动翻转 */
+function positionThemeMenu() {
+    if (!themeMenu || !themeToggle) return;
+    const r = themeToggle.getBoundingClientRect();
+    const mw = themeMenu.offsetWidth || 320;
+    const mh = themeMenu.offsetHeight || 320;
+    let left = Math.min(r.left, window.innerWidth - mw - 8);
+    let top = r.top - mh - 8;                       // 默认向上弹（操作栏在底部）
+    if (top < 8) top = Math.min(r.bottom + 8, window.innerHeight - mh - 8);
+    themeMenu.style.left = Math.max(8, left) + 'px';
+    themeMenu.style.top = Math.max(8, top) + 'px';
+}
+
+function openThemeMenu() {
+    if (!themeMenu) return;
+    themeMenu.classList.add('open');
+    themeMenu.setAttribute('aria-hidden', 'false');
+    positionThemeMenu();
+    syncThemeUI();
+    const first = themeMenu.querySelector('.tm-swatch');
+    if (first) first.focus();
+    document.addEventListener('keydown', themeMenuKeydown);
+    document.addEventListener('click', themeMenuOutsideClick, true);
+}
+
+function closeThemeMenu() {
+    if (!themeMenu) return;
+    if (!themeMenu.classList.contains('open')) return;
+    themeMenu.classList.remove('open');
+    themeMenu.setAttribute('aria-hidden', 'true');
+    document.removeEventListener('keydown', themeMenuKeydown);
+    document.removeEventListener('click', themeMenuOutsideClick, true);
+    syncThemeUI();
+    if (themeToggle) themeToggle.focus();
+}
+
+function themeMenuKeydown(e) {
+    if (e.key === 'Escape') { e.preventDefault(); closeThemeMenu(); }
+}
+
+function themeMenuOutsideClick(e) {
+    if (themeMenu.contains(e.target) || (themeToggle && themeToggle.contains(e.target))) return;
+    closeThemeMenu();
+}
+
+if (themeToggle && themeMenu) {
+    themeToggle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (themeMenu.classList.contains('open')) closeThemeMenu();
+        else openThemeMenu();
+    });
+    renderThemeMenu();
+}
+
+// 系统偏好变化时，仅「自动」模式需要跟随
+try {
+    if (window.matchMedia) {
+        const mq = window.matchMedia('(prefers-color-scheme: dark)');
+        const onSysChange = () => { if (appearance === 'auto') applyTheme(); };
+        if (mq.addEventListener) mq.addEventListener('change', onSysChange);
+        else if (mq.addListener) mq.addListener(onSysChange);
+    }
+} catch (_) {}
+
 loadTheme();
+// 这里只读取存储；真正落地（并可能触发全屏/PiP 重算）放在文件末尾
+window.addEventListener('resize', () => {
+    if (themeMenu && themeMenu.classList.contains('open')) positionThemeMenu();
+});
 
 // ============================================================
 //  PWA 安装提示
@@ -705,15 +987,32 @@ let pipWindow = null;
 let pipInterval = null;
 
 function buildPipContent(doc, winW, winH) {
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    const bg = isDark ? '#1c1814' : '#f8f4ee';
-    const cardBg = isDark ? '#2a2420' : '#ffffff';
-    const textMain = isDark ? '#e8e0d8' : '#3a3228';
-    const textSec = isDark ? '#a09088' : '#a09080';
-    const accent = isDark ? '#d4a880' : '#c8946a';
-    const border = isDark ? '#3a342e' : '#e8e0d8';
+    // 小窗配色直接读当前主题的 token，而不是另写一套写死的浅/深色值。
+    // 原先判断的是 data-theme === 'dark' —— 那是 v2.0 的旧主题名，
+    // v2.1 之后主题是 ink/night/board/celadon/camp，判断永远为假，
+    // 于是夜航主题下的小窗也是一片浅色。
+    const rs = getComputedStyle(document.documentElement);
+    const tok = (name, fallback) => {
+        const v = rs.getPropertyValue(name).trim();
+        return v || fallback;
+    };
+    const bg = tok('--bg', '#f8f4ee');
+    const cardBg = tok('--bg-card', '#ffffff');
+    const textMain = tok('--text', '#3a3228');
+    const textSec = tok('--text-2', '#a09080');
+    const text3 = tok('--text-3', '#9c8a76');
+    const accent = tok('--accent', '#c8946a');
+    const border = tok('--border', '#e8e0d8');
+    const borderStrong = tok('--border-strong', '#cdbfa9');
+    const fontSans = tok('--font-sans', '-apple-system, "PingFang SC", "Microsoft YaHei", sans-serif');
+    const rBtn = tok('--r-btn', '5px');
+    const rSharp = tok('--r-sharp', '2px');
 
     const baseSize = Math.max(8, Math.min(winW, winH * 1.8) / 22);
+    // 大天数按窗口宽高双约束，永不溢出
+    const daySize = Math.min(winW * 0.34, winH * 0.42, baseSize * 3.6);
+    const unitSize = daySize * 0.26;
+    const subSize = Math.min(winW * 0.075, winH * 0.14, baseSize * 0.86);
 
     doc.write(`<!DOCTYPE html>
 <html>
@@ -724,87 +1023,109 @@ function buildPipContent(doc, winW, winH) {
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body { width: 100%; height: 100%; overflow: hidden; }
 body {
-    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+    font-family: ${fontSans};
     background: ${bg};
     color: ${textMain};
     display: flex; flex-direction: column;
     justify-content: center; align-items: center;
-    padding: ${baseSize * 0.4}px;
+    padding: ${baseSize * 0.5}px;
     user-select: none;
 }
+/* 目标行：与 demo 的 .h-target 同一层级（小字、字距大） */
 .pip-label {
-    font-size: ${baseSize * 0.7}px;
-    color: ${textSec};
+    font-size: ${baseSize * 0.62}px;
+    color: ${text3};
     letter-spacing: 2px;
-    margin-bottom: ${baseSize * 0.3}px;
+    margin-bottom: ${baseSize * 0.22}px;
     flex-shrink: 0;
     text-align: center;
     white-space: nowrap;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
-.pip-digits {
-    display: flex;
-    justify-content: center;
-    align-items: center;
+/* 大天数 + 单位：与页面 Hero / 全屏同一套数字层级 */
+.pip-main {
+    display: flex; align-items: baseline; justify-content: center;
     gap: ${baseSize * 0.12}px;
+    white-space: nowrap;
+    flex-shrink: 0;
     font-variant-numeric: tabular-nums;
-    width: 100%;
-    flex-shrink: 0;
+    line-height: .9;
 }
-.pip-digits .block { flex: 1; text-align: center; min-width: 0; }
-.pip-digits .block .num {
-    font-size: ${baseSize * 1.6}px;
-    font-weight: 700;
+.pip-main .num {
+    font-size: ${daySize}px;
+    font-weight: 800;
+    letter-spacing: -.02em;
     color: ${accent};
-    line-height: 1.15;
+    white-space: nowrap;
 }
-.pip-digits .block .unit {
-    font-size: ${baseSize * 0.5}px;
+.pip-main .unit {
+    font-size: ${unitSize}px;
+    font-weight: 700;
+    letter-spacing: .04em;
     color: ${textSec};
-    margin-top: ${baseSize * 0.08}px;
+    white-space: nowrap;
 }
-.pip-digits .sep {
-    font-size: ${baseSize * 1.2}px;
-    font-weight: 300;
-    color: ${textSec};
+/* 次级精确行：左侧一道实色竖线，与页面 Hero 的 .t-rest 同构 */
+.pip-sub {
+    display: flex; align-items: baseline; justify-content: center;
+    gap: ${baseSize * 0.14}px;
+    margin-top: ${baseSize * 0.3}px;
+    padding-left: ${baseSize * 0.3}px;
+    border-left: 3px solid ${accent};
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: ${subSize}px;
+    color: ${textMain};
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
     flex-shrink: 0;
-    width: ${baseSize * 0.3}px;
-    text-align: center;
-    padding-bottom: ${baseSize * 0.45}px;
 }
+.pip-sub .u2 { font-size: .5em; opacity: .7; margin-left: 1px; font-family: ${fontSans}; }
+.pip-sub .sep { opacity: .45; }
+/* 下一场：直角小条，走卡片的描边语言而不是圆角胶囊 */
 .pip-next {
-    margin-top: ${baseSize * 0.5}px;
-    padding: ${baseSize * 0.3}px ${baseSize * 0.6}px;
+    margin-top: ${baseSize * 0.45}px;
+    padding: ${baseSize * 0.26}px ${baseSize * 0.5}px;
     background: ${cardBg};
-    border-radius: ${baseSize * 0.4}px;
-    border: 1px solid ${border};
+    border-radius: ${rBtn};
+    border: 1.5px solid ${borderStrong};
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: baseline;
     width: 100%;
-    max-width: ${Math.min(winW - baseSize * 0.8, 340)}px;
+    max-width: ${Math.min(winW - baseSize, 340)}px;
     flex-shrink: 0;
-    font-size: ${baseSize * 0.7}px;
+    font-size: ${baseSize * 0.62}px;
 }
-.pip-next .label { color: ${textSec}; white-space: nowrap; }
-.pip-next .name { color: ${textMain}; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 0 ${baseSize * 0.25}px; flex: 1; }
-.pip-next .time { color: ${accent}; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pip-next .label { color: ${text3}; white-space: nowrap; letter-spacing: 1px; }
+.pip-next .name {
+    color: ${textMain}; font-weight: 700; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+    margin: 0 ${baseSize * 0.3}px; flex: 1;
+}
+.pip-next .time {
+    color: ${accent}; font-weight: 700;
+    font-variant-numeric: tabular-nums; white-space: nowrap;
+}
 </style>
 </head>
 <body>
     <div class="pip-label" id="pipLabel">距 2027 年高考还有</div>
-    <div class="pip-digits">
-        <div class="block"><div class="num" id="pipD">344</div><div class="unit">天</div></div>
+    <div class="pip-main">
+        <span class="num" id="pipD">--</span><span class="unit">天</span>
+    </div>
+    <div class="pip-sub">
+        <span><b id="pipH">--</b><span class="u2">时</span></span>
         <span class="sep">:</span>
-        <div class="block"><div class="num" id="pipH">23</div><div class="unit">时</div></div>
+        <span><b id="pipM">--</b><span class="u2">分</span></span>
         <span class="sep">:</span>
-        <div class="block"><div class="num" id="pipM">59</div><div class="unit">分</div></div>
-        <span class="sep">:</span>
-        <div class="block"><div class="num" id="pipS">58</div><div class="unit">秒</div></div>
+        <span><b id="pipS">--</b><span class="u2">秒</span></span>
     </div>
     <div class="pip-next">
         <span class="label">下一场</span>
-        <span class="name" id="pipNext">语文</span>
-        <span class="time" id="pipNextTime">344天</span>
+        <span class="name" id="pipNext">—</span>
+        <span class="time" id="pipNextTime">—</span>
     </div>
 </body>
 </html>`);
@@ -954,6 +1275,12 @@ function updateFullscreen() {
         fsDh.textContent = pad2(h);
         fsDm.textContent = pad2(m);
         fsDs.textContent = pad2(s);
+        // 非高考阶段：大数字数的是该阶段的开考/结束，同样要说清楚
+        const clPhase = document.getElementById('fsCountLabel');
+        if (clPhase) {
+            clPhase.textContent = now < start ? `距 ${cfg.name} 开考还有`
+                : (now <= end ? `距 ${cfg.name} 结束还有` : `${cfg.name} 已结束`);
+        }
         return;
     }
 
@@ -1001,8 +1328,17 @@ function updateFullscreen() {
     document.getElementById('fsProgressFill').style.width = progFill;
     document.getElementById('fsProgEnd').textContent  = progEnd;
 
+    // 顶部这行只说明「现在处于什么状态」。
+    // 具体是哪一场、几点开考、还有多久，都在底部信息条里说 ——
+    // 原先这行也写「下一场 语文 09:00 ~ 11:30」，与底部完全重复。
     document.getElementById('fsCurLabel').textContent =
-        hasCurrent ? '当前考试' : (isVisible ? '下一场' : '高考进程');
+        hasCurrent ? '当前考试' : (allDone ? '高考进程' : '备考中');
+    // 待考/结束时这行不重复状态条里的文案（「等待开考」「已全部完成」），
+    // 也不显示一个与「下一场」无关的时段
+    if (!hasCurrent) {
+        document.getElementById('fsCurName').textContent = '';
+        document.getElementById('fsCurTime').textContent = '';
+    }
 
     const fsDd = document.getElementById('fsDd');
     const fsDh = document.getElementById('fsDh');
@@ -1026,15 +1362,31 @@ function updateFullscreen() {
         fsDh.textContent = pad2(h);
         fsDm.textContent = pad2(m);
         fsDs.textContent = pad2(s);
+        // 说清大数字在数什么：进行中数到本场结束，未开考数到下一场开考，
+        // 全部结束后数到次年高考。没有这行，「距开考」会被误读成进度条那个数。
+        const cl = document.getElementById('fsCountLabel');
+        if (cl) {
+            cl.textContent = hasCurrent ? '距本场结束还有'
+                : (allDone ? `距 ${GAOKAO_YEAR + 1} 年高考还有` : '距开考还有');
+        }
     } else {
         fsDd.textContent = '—'; fsDh.textContent = '—';
         fsDm.textContent = '—'; fsDs.textContent = '—';
+        const clNone = document.getElementById('fsCountLabel');
+        if (clNone) clNone.textContent = '全部考试已结束';
     }
 
+    // 底部「下一场」：正在进行时这里显示的是**当前场次的结束时间**，
+    // 与顶部大数字（数到本场结束）指向同一时刻，不会出现两个不同的数。
     let nextName = '—', nextTime = '—', nextCountdown = '—';
     for (const ex of exams) {
         if (!isExamRelevant(ex, selectedSubjects)) continue;
-        const s = getExamStart(ex);
+        const s = getExamStart(ex), e = getExamEnd(ex);
+        if (now >= s && now <= e) {
+            nextName = ex.name;
+            nextTime = '至 ' + pad2(ex.end[0]) + ':' + pad2(ex.end[1]);
+            break;
+        }
         if (now < s) {
             nextName = ex.name;
             const sh = pad2(ex.start[0]), sm = pad2(ex.start[1]);
@@ -1051,6 +1403,10 @@ function updateFullscreen() {
             break;
         }
     }
+
+    // 进行中时底部改称「本场」，避免「下一场」与顶部「距本场结束」互相矛盾
+    const footLabel = document.querySelector('#fsNext .fs-foot-l');
+    if (footLabel) footLabel.textContent = hasCurrent ? '本场' : '下一场';
 
     if (allDone) {
         document.getElementById('fsNext').style.display = 'none';
@@ -1074,9 +1430,58 @@ function updateFullscreen() {
     }
 }
 
+// ------------------------------------------------------------
+//  滚动锁
+//  ------------------------------------------------------------
+//  不能用 `overflow: hidden`。原因：
+//  把 html/body 设成 hidden 会**改变 sticky 元素的滚动容器** ——
+//  滚动容器从视口变成 html/body 本身，而它此时并不滚动，
+//  于是吸附偏移量塌缩、根元素回到滚动位置 0，左栏的主倒计时瞬间被顶出视口
+//  （实测：弹窗打开瞬间 hero.top 由 16 变成 -377，也就是「突兀消失」）。
+//
+//  也不能用 `body { position: fixed }`：那会让 body 成为 fixed 定位的
+//  包含块，覆盖层（`.modal-overlay` / `.fs-overlay` 都是 position:fixed）
+//  会改为相对 body 定位，反而错位。
+//
+//  这里改用**冻结滚动位置**：不改变任何布局，只把滚动位置按住。
+//  对 sticky 没有任何影响（滚动容器仍是视口），覆盖层也照常相对视口定位。
+const SCROLL_KEYS = {
+    ArrowUp: 1, ArrowDown: 1, PageUp: 1, PageDown: 1, Home: 1, End: 1, ' ': 1, Spacebar: 1
+};
+let scrollLockY = 0;
+let scrollLockOn = false;
+
+function holdScrollPosition() {
+    if (!scrollLockOn) return;
+    if (window.scrollY !== scrollLockY) window.scrollTo(0, scrollLockY);
+}
+
+function onScrollLockKey(e) {
+    const t = e.target;
+    // 表单控件里要放行方向键等按键
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' ||
+              (t.isContentEditable === true))) return;
+    if (SCROLL_KEYS[e.key]) e.preventDefault();
+}
+
 function lockScroll(lock) {
-    document.documentElement.style.overflow = lock ? 'hidden' : '';
-    document.body.style.overflow = lock ? 'hidden' : '';
+    if (lock) {
+        scrollLockY = window.scrollY || window.pageYOffset || 0;
+        scrollLockOn = true;
+        window.addEventListener('scroll', holdScrollPosition, { passive: true });
+        window.addEventListener('wheel', holdScrollPosition, { passive: true });
+        window.addEventListener('touchmove', holdScrollPosition, { passive: true });
+        window.addEventListener('keydown', onScrollLockKey);
+    } else {
+        scrollLockOn = false;
+        window.removeEventListener('scroll', holdScrollPosition);
+        window.removeEventListener('wheel', holdScrollPosition);
+        window.removeEventListener('touchmove', holdScrollPosition);
+        window.removeEventListener('keydown', onScrollLockKey);
+        // 兜底：把位置精确还原
+        if (scrollLockY) window.scrollTo(0, scrollLockY);
+        scrollLockY = 0;
+    }
 }
 
 fsToggle.addEventListener('click', () => {
@@ -1189,6 +1594,60 @@ function getPhaseStatus(phaseId) {
 }
 
 // ---- 阶段导航 ----
+/**
+ * 当前真实阶段 = **下一个尚未结束的阶段**。
+ *
+ * 语义修正（对齐 demo）：零诊已结束、一诊未开始时，考生正要面对的是一诊，
+ * 而「高考」还在 246 天之后。早先 railMode 直接取 activePhaseId（默认 'final'），
+ * 于是头部写着「当前：高考」，与「距高考还有 246 天」自相矛盾。
+ * 全部阶段结束后返回 null。
+ */
+function currentPhaseId() {
+    const now = new Date();
+    for (const id of PHASE_ORDER) {
+        if (getPhaseDates(id).end >= now) return id;
+    }
+    return null;
+}
+
+/** 正在查看的阶段是否已结束 */
+function isViewingPastPhase() {
+    return getPhaseStatus(activePhaseId) === 'done';
+}
+
+/**
+ * 轨道头部右侧文案 + 「回到当前阶段」按钮的显隐。
+ *
+ * 按钮的显隐条件是「**正在查看的阶段 ≠ 当前阶段**」，与它是过去还是未来无关。
+ * 早先只对「已结束」的阶段显示，于是点二诊/三诊/高考都没有出口 ——
+ * 用户得自己找回那个高亮节点才能回来，而他会读成「只有零诊有返回」。
+ * 未来阶段同样需要一个明确的退路，语义上「回到当前阶段」对两者都成立。
+ */
+function syncRailMode() {
+    const el = document.getElementById('railMode');
+    const back = document.getElementById('railBack');
+    const rail = document.getElementById('pgRail');
+    const curId = currentPhaseId();
+    const away = !!curId && activePhaseId !== curId;
+    const past = isViewingPastPhase();
+
+    // 轨道高亮只在「看历史」时打开：未来阶段不是历史，换色会误导
+    if (rail) rail.classList.toggle('is-focused', past);
+
+    if (el) {
+        if (!curId) {
+            el.textContent = '所有阶段已结束';
+        } else if (away) {
+            el.textContent = past
+                ? '查看中：' + PHASE_CONFIG[activePhaseId].name + '（已结束）'
+                : '查看中：' + PHASE_CONFIG[activePhaseId].name;
+        } else {
+            el.textContent = '当前：' + PHASE_CONFIG[curId].name;
+        }
+    }
+    if (back) back.hidden = !away;
+}
+
 function initPhaseNav() {
     const nav = document.getElementById('phaseNav');
     if (!nav) return;
@@ -1197,7 +1656,7 @@ function initPhaseNav() {
         const status = getPhaseStatus(id);
         const tab = document.createElement('button');
         tab.type = 'button';
-        tab.className = `phase-tab${status === 'done' ? ' done' : ''}${id === activePhaseId ? ' active' : ''}`;
+        tab.className = `phase-tab${status === 'done' ? ' done' : ''}${status === 'ongoing' ? ' live' : ''}${id === activePhaseId ? ' active' : ''}`;
         tab.dataset.phase = id;
         tab.setAttribute('aria-pressed', String(id === activePhaseId));
         tab.innerHTML = `
@@ -1209,6 +1668,7 @@ function initPhaseNav() {
         nav.appendChild(tab);
     });
     lastPhaseStatusKey = PHASE_ORDER.map(id => getPhaseStatus(id)).join('|');
+    syncRailMode();
 }
 
 /** 阶段状态随时间翻转时同步导航徽章（每秒调用，状态未变则不触 DOM） */
@@ -1222,6 +1682,7 @@ function syncPhaseNavStatus() {
         const cfg = PHASE_CONFIG[id];
         const status = getPhaseStatus(id);
         tab.classList.toggle('done', status === 'done');
+        tab.classList.toggle('live', status === 'ongoing');
         setText(tab.querySelector('.pt-sub'),
             status === 'done' ? '已结束' : status === 'ongoing' ? '进行中' : cfg.short);
 
@@ -1246,15 +1707,42 @@ function switchPhase(phaseId) {
         tab.classList.toggle('active', on);
         tab.setAttribute('aria-pressed', String(on));
     });
+    syncRailMode();
 
     const isFinal = phaseId === 'final';
     document.getElementById('gaokaoContent').classList.toggle('hidden', !isFinal);
-    document.getElementById('phaseDetail').classList.toggle('show', !isFinal);
+    // 阶段专有信息（全名 + 徽章）只在非高考阶段出现；
+    // 倒计时本身始终由 Hero 一处承担，不再有第二张卡片。
+    const phaseLine = document.getElementById('heroPhaseLine');
+    if (phaseLine) phaseLine.classList.toggle('show', !isFinal);
+
+    // 考试日程卡装的是 9 场高考科目，它必须跟着 #gaokaoContent 一起隐藏。
+    //
+    // v2.3.0 把它移出了 #gaokaoContent（为了和日历卡一起排在选科之后、
+    // 日程收尾），于是「只隐藏 gaokaoContent」就不再够用 ——
+    // 切到「一诊」时左栏已经是诊断倒计时，右栏却还挂着 9 场高考日程，
+    // 页面上同时出现两套考试的倒计时，看起来就是「有残余」。
+    const scheduleCard = document.getElementById('scheduleCard');
+    if (scheduleCard) scheduleCard.classList.toggle('hidden', !isFinal);
 
     updatePhaseHero();
     if (!isFinal) updatePhaseDetail();
     if (fsOverlay.classList.contains('open')) updateFullscreen();
 }
+
+// ---- 「回到当前阶段」 ----
+// 只在查看已结束阶段时可见（显隐由 syncRailMode 负责）。
+// 回到「下一个尚未结束的阶段」；若全部结束则停在高考，不留一个死按钮。
+(function bindRailBack() {
+    const btn = document.getElementById('railBack');
+    if (!btn) return;
+    btn.addEventListener('click', () => {
+        const target = currentPhaseId() || 'final';
+        switchPhase(target);
+        const tab = document.querySelector(`.phase-tab[data-phase="${target}"]`);
+        if (tab && tab.focus) tab.focus();
+    });
+})();
 
 /**
  * Hero 倒计时唯一入口：
@@ -1293,6 +1781,25 @@ function updatePhaseHero() {
     // 仅高考进行中显示状态横幅
     dom.statusMsg.classList.toggle('show', ongoing && activePhaseId === 'final');
 
+    // ---- v2.3.0：目标日期行 + 状态条（对齐 demo 的 .h-date / .stat-row） ----
+    const heroDateEl = document.getElementById('heroDate');
+    if (heroDateEl) {
+        if (activePhaseId === 'final') {
+            // 起止都用 computeExamDates() 的结果：用户改过高考日期后自动跟随
+            const firstEx = examDates[0] || exams[0];
+            const lastEx = examDates[examDates.length - 1] || exams[exams.length - 1];
+            if (firstEx && lastEx) {
+                setText(heroDateEl,
+                    `${fmtCnFull(firstEx.start)} 开考 · ${fmtCnMonthDay(lastEx.end)} 结束`);
+            } else {
+                setText(heroDateEl, '');
+            }
+        } else {
+            setText(heroDateEl, `${fmtCnFull(start)} 开始 · ${fmtCnMonthDay(end)} 结束`);
+        }
+    }
+    buildHeroStats(activePhaseId, now);
+
     // 读屏播报（分钟级变化才更新）
     const a11yKey = `${label}|${dom.hDays.textContent}-${dom.hHours.textContent}-${dom.hMins.textContent}`;
     if (a11yKey !== lastA11yKey) {
@@ -1303,51 +1810,101 @@ function updatePhaseHero() {
     }
 }
 
-function updatePhaseDetail() {
-    const detail = document.getElementById('phaseDetail');
-    if (!detail.classList.contains('show')) return;
+/**
+ * Hero 状态条：备考状态 / 距下一场诊断 / 已完成场次占比。
+ * 逐秒刷新，所以每秒都在重建 DOM —— 内容一模一样时直接跳过，
+ * 避免每秒无谓地重排整条状态栏。
+ */
+let lastHeroStatsKey = '';
 
-    const cfg = PHASE_CONFIG[activePhaseId];
-    const { start, end } = getPhaseDates(activePhaseId);
-    const status = getPhaseStatus(activePhaseId);
-    const now = new Date();
+function buildHeroStats(phaseId, now) {
+    const box = document.getElementById('heroStats');
+    if (!box) return;
 
-    setText(document.getElementById('pdName'), cfg.longName || cfg.name);
+    const pills = [];
+    if (phaseId === 'final') {
+        const firstStart = getPhaseDates('final').start;
+        const state = now < firstStart ? '备考中' : (now <= getPhaseDates('final').end ? '高考进行中' : '已完成');
+        pills.push({ cls: 'accent', html: '<span class="dt pulse"></span>' + state });
 
-    const startStr = fmtCnFull(start);
-    const endStr = fmtCnMonthDay(end);
-    setText(document.getElementById('pdDateRange'), `${startStr} - ${endStr}`);
+        // 距下一场尚未开考的考试。
+        // 注意 examDates 里只有 {start, end}，没有 name，
+        // 科目名要在 exams 里按下标取（曾在此写出 undefined）。
+        let nextIdx = -1;
+        examDates.forEach((ex, i) => { if (nextIdx < 0 && ex.start > now) nextIdx = i; });
+        if (nextIdx >= 0) {
+            const dd = Math.max(0, Math.floor((examDates[nextIdx].start - now) / MS_DAY));
+            pills.push({ cls: '', text: `下一场 ${exams[nextIdx].name} · ${dd} 天后` });
+        } else {
+            pills.push({ cls: '', text: '所有场次已结束 · 金榜题名' });
+        }
 
-    const badge = document.getElementById('pdBadge');
-    badge.className = 'pd-status-badge';
-    if (status === 'upcoming') {
-        badge.classList.add('upcoming');
-        badge.textContent = '即将开始';
-    } else if (status === 'ongoing') {
-        badge.classList.add('ongoing');
-        badge.textContent = '进行中';
+        // 已完成场次 / 总场次
+        let done = 0;
+        examDates.forEach(ex => { if (ex.end <= now) done += 1; });
+        pills.push({ cls: '', text: `已完成 ${done} / ${examDates.length} 场` });
     } else {
-        badge.classList.add('done');
-        badge.textContent = '已完成';
+        const status = getPhaseStatus(phaseId);
+        const stateText = status === 'ongoing' ? '进行中' : status === 'done' ? '已结束' : '即将开始';
+        pills.push({ cls: 'accent', html: '<span class="dt pulse"></span>' + stateText });
+        // 距下一场（尚未开始的阶段）。刻意不再输出「共 N 个阶段」——
+        // 那是实现细节，对考生没有信息量。
+        const nextPhaseId = PHASE_ORDER.find(id => getPhaseDates(id).start > now);
+        if (nextPhaseId) {
+            const cfg = PHASE_CONFIG[nextPhaseId];
+            const dd = Math.max(0, Math.floor((getPhaseDates(nextPhaseId).start - now) / MS_DAY));
+            pills.push({ cls: '', text: `距${cfg.name} ${dd} 天` });
+        }
     }
 
-    let diff, label;
-    if (now < start) { diff = start - now; label = '距开考还有'; }
-    else if (now <= end) { diff = end - now; label = '距结束还有'; }
-    else { diff = 0; label = '已结束'; }
+    const key = pills.map(p => p.text || p.html).join('|');
+    if (key === lastHeroStatsKey) return;
+    lastHeroStatsKey = key;
 
-    const p = splitDuration(diff);
-    setText(document.getElementById('pdDays'), pad2(p.d));
-    setText(document.getElementById('pdHours'), pad2(p.h));
-    setText(document.getElementById('pdMins'), pad2(p.m));
-    setText(document.getElementById('pdSecs'), pad2(p.s));
-    setText(document.getElementById('pdDesc'), label);
+    box.innerHTML = pills.map(p =>
+        `<span class="pill ${p.cls}">${p.html || p.text}</span>`).join('');
+}
 
-    // 脉冲动画改由 CSS 类驱动（见 style.css 的 .phase-detail.ongoing）
-    detail.classList.toggle('ongoing', status === 'ongoing');
+/**
+ * 阶段专有内容写进 Hero（名称 + 状态徽章）。
+ *
+ * 原先这里还维护一张独立的「阶段详情」卡片，里面有自己的一整套
+ * 天/时/分/秒方块 —— 而 Hero 已经在数同一件事，于是非高考阶段
+ * 页面上并排出现两个一模一样的倒计时（实测都是 205 天 11 时 38 分 03 秒）。
+ * 现在只保留 Hero 一处倒计时，这张卡片已从 HTML 中移除；
+ * 阶段名与状态作为 Hero 内的补充信息，不再是第二个倒计时。
+ */
+function updatePhaseDetail() {
+    const cfg = PHASE_CONFIG[activePhaseId];
+    const status = getPhaseStatus(activePhaseId);
+
+    setText(document.getElementById('heroPhaseName'), cfg.longName || cfg.name);
+
+    const badge = document.getElementById('heroPhaseBadge');
+    if (badge) {
+        badge.className = 'pd-status-badge';
+        if (status === 'upcoming') {
+            badge.classList.add('upcoming');
+            badge.textContent = '即将开始';
+        } else if (status === 'ongoing') {
+            badge.classList.add('ongoing');
+            badge.textContent = '进行中';
+        } else {
+            badge.classList.add('done');
+            badge.textContent = '已完成';
+        }
+    }
+    // 脉冲动画由 CSS 类驱动
+    const hero = dom.heroSection;
+    if (hero) hero.classList.toggle('ongoing', status === 'ongoing');
 }
 
 // ---- 自定义日历选择器 ----
+// calState 同时承载两个概念，必须分开：
+//   sel*  —— 已提交的选中日期（画橙色色块的唯一依据）
+//   year/month/day —— 浏览中的游标（翻月与键盘方向键在动它）
+// 早先只有一套字段，goMonth() 又把 day 重置成 1，于是「只是翻到另一个月」
+// 就会把那个月的 1 号画成选中态，误导用户以为已经选了日期。
 let calState = null;
 
 function openCalendar(trigger) {
@@ -1355,7 +1912,8 @@ function openCalendar(trigger) {
     const year = parseInt(trigger.dataset.year);
     const month = parseInt(trigger.dataset.month);
     const day = parseInt(trigger.dataset.day) || 1;
-    calState = { trigger, year, month, day };
+    calState = { trigger, year, month, day,
+                 selYear: year, selMonth: month, selDay: day };
     trigger.classList.add('active');
     trigger.setAttribute('aria-expanded', 'true');
     renderCalendar(year, month);
@@ -1379,7 +1937,10 @@ function closeCalendar() {
 
 /** 把焦点移到当前选中的日期格，便于键盘操作 */
 function focusSelectedDay() {
+    // 优先聚焦已选日期；翻到别的月份时它不在本视图，退化为聚焦今天所在格，
+    // 再退化为当月第一格 —— 键盘用户始终有落点。
     const sel = document.querySelector('#calDays .cal-day.selected')
+        || document.querySelector('#calDays .cal-day.today')
         || document.querySelector('#calDays .cal-day:not(.other-month)');
     if (sel) sel.focus();
 }
@@ -1421,9 +1982,11 @@ function renderCalendar(year, month) {
     const today = new Date();
     const todayStr = `${today.getFullYear()}-${pad2(today.getMonth() + 1)}-${pad2(today.getDate())}`;
 
-    const selYear = calState ? calState.year : year;
-    const selMonth = calState ? calState.month : month;
-    const selDay = calState ? calState.day : 1;
+    // 选中态只看已提交的 sel*，与当前浏览的月份无关：
+    // 翻到别的月份时不该有任何一格被画成选中。
+    const selYear = calState ? calState.selYear : year;
+    const selMonth = calState ? calState.selMonth : month;
+    const selDay = calState ? calState.selDay : 1;
     const selStr = `${selYear}-${pad2(selMonth)}-${pad2(selDay)}`;
 
     const cells = [];
@@ -1465,6 +2028,10 @@ function selectDay(day) {
     trigger.dataset.year = year;
     trigger.dataset.month = month;
     trigger.dataset.day = day;
+    // 提交选中：只有真正点了某一天，sel* 才前进
+    calState.selYear = year;
+    calState.selMonth = month;
+    calState.selDay = day;
     setText(trigger.querySelector('.dp-value'), `${year}年${month}月${day}日`);
     const focusTarget = trigger;
     closeCalendar();
@@ -1480,7 +2047,10 @@ function goMonth(delta) {
 
     calState.year = newYear;
     calState.month = newMonth;
-    calState.day = 1;
+    // 刻意不重置 calState.day：
+    // 1) 翻月只是「浏览」，不应改动已提交的选中日期（sel* 保持不变）；
+    // 2) day 同时是键盘游标，重置成 1 会让方向键跳回月初。
+    // 于是「翻到 2026/6」不会再凭空把 6 月 1 日画成选中。
     renderCalendar(calState.year, calState.month);
     positionCalendar(calState.trigger);
     focusSelectedDay();
@@ -1764,4 +2334,432 @@ function showUpdateHint() {
     bar.textContent = '有新版本可用，点击刷新';
     bar.addEventListener('click', () => location.reload());
     document.body.appendChild(bar);
+}
+
+// ============================================================
+//  v2.2.0 · 节假日日历
+//  ------------------------------------------------------------
+//  数据：内置兜底表在 time.js（HOLIDAY_FALLBACK），
+//  启动后异步 fetch('./data/holidays.json') 覆盖；失败静默保留兜底。
+//  这样页面任何时刻都有数据，网络只是「可能更新一点」。
+//  刻意不运行时请求第三方 API：法定节假日一年一变，
+//  引入运行时网络依赖会带来可用性耦合、CORS、离线失效与隐私成本。
+// ============================================================
+
+const holidayModal = document.getElementById('holidayModal');
+let hmState = { year: 0, month: 0 };
+let lastFocusedBeforeHoliday = null;
+
+/** 北京时间下的「今天」年月日 */
+function bjToday() {
+    const t = new Date(Date.now() + CN_OFFSET_MIN * 60000);
+    return { y: t.getUTCFullYear(), m: t.getUTCMonth() + 1, d: t.getUTCDate() };
+}
+
+/**
+ * 选出「当前正在放的假期」或「下一个假期」。
+ * 弹窗与首页卡片共用这一份逻辑，杜绝两处各算一遍导致文案不一致。
+ */
+function pickHolidayTarget() {
+    const today = bjToday();
+    const todayNum = cnDayNumber(bjDate(today.y, today.m, today.d));
+    let active = null, next = null;
+    getHolidayRuns().forEach(r => {
+        const s = r.startKey.split('-').map(Number);
+        const e = r.endKey.split('-').map(Number);
+        const sNum = cnDayNumber(bjDate(s[0], s[1], s[2]));
+        const eNum = cnDayNumber(bjDate(e[0], e[1], e[2]));
+        if (todayNum >= sNum && todayNum <= eNum) active = { r: r, left: eNum - todayNum };
+        if (sNum > todayNum && !next) next = { r: r, inDays: sNum - todayNum };
+    });
+    return { todayNum: todayNum, active: active, next: next };
+}
+
+/** 假期区间文案，如「10月1日 – 10月5日 · 共 7 天」 */
+function holidayRangeText(r) {
+    const s1 = Number(r.startKey.slice(5, 7)), d1 = Number(r.startKey.slice(8, 10));
+    const e1 = Number(r.endKey.slice(5, 7)), d2 = Number(r.endKey.slice(8, 10));
+    return s1 + ' 月 ' + d1 + ' 日 – ' + e1 + ' 月 ' + d2 + ' 日 · 共 ' + r.days + ' 天';
+}
+
+/** 假期名称文案（含「假期中」与「预估」后缀） */
+function holidayNameText(r, inHoliday) {
+    return r.name + (inHoliday ? ' · 假期中' : '') + (r.confirmed ? '' : '（预估）');
+}
+
+/**
+ * 把当前假期情况同时落到「首页常驻卡」与「弹窗」。
+ * 两处 ID 各自独立（nh* / hmNext*），所以可以直接双写，不需要克隆 DOM。
+ */
+function applyHolidayCard(pick) {
+    const active = pick.active, next = pick.next;
+    const target = active || next;
+    const inHoliday = !!active;
+
+    // 命名的三处目标：左栏假期卡 / 右栏日历卡 / 速览弹窗
+    const NAMED = [
+        { name: 'nhName', meta: 'nhMeta', days: 'nhDays', unit: 'nhUnit' },
+        { name: 'nhcName', meta: 'nhcMeta', days: 'nhcDays', unit: 'nhcUnit' },
+        { name: 'hmNextName', meta: 'hmNextMeta', days: 'hmNextDays', unit: 'hmNextUnit' }
+    ];
+
+    if (!target) {
+        NAMED.forEach(t => {
+            setText(document.getElementById(t.name), '暂无后续假期安排');
+            setText(document.getElementById(t.meta), '待国务院办公厅发布次年安排');
+            setText(document.getElementById(t.days), '--');
+            setText(document.getElementById(t.unit), '');
+        });
+        fillHolidayStrip(null);
+        return;
+    }
+
+    const r = target.r;
+    const daysText = String(inHoliday ? active.left : next.inDays);
+    const unitText = inHoliday ? '天后结束' : '天';
+    NAMED.forEach(t => {
+        setText(document.getElementById(t.name), holidayNameText(r, inHoliday));
+        setText(document.getElementById(t.meta), holidayRangeText(r));
+        setText(document.getElementById(t.days), daysText);
+        setText(document.getElementById(t.unit), unitText);
+    });
+
+    // 只有左栏卡片有进度方段（其余两处用文字/月历表达进度，不需要重复）
+    fillHolidayStrip(active ? { days: r.days, on: r.days - active.left } : null);
+}
+
+/** 假期进度方段：等分小方块，已过为实色、未过为浅色 */
+function fillHolidayStrip(info) {
+    const strip = document.getElementById('nhStrip');
+    if (!strip) return;
+    if (!info) { strip.innerHTML = ''; return; }
+    strip.innerHTML = Array.from({ length: info.days })
+        .map((_, i) => `<i class="${i < info.on ? 'on' : ''}"></i>`).join('');
+}
+
+function renderHoliday() {
+    if (!holidayModal) return;
+    const today = bjToday();
+    const todayK = holidayKey(today.y, today.m, today.d);
+    const todayNum = cnDayNumber(bjDate(today.y, today.m, today.d));
+
+    // ---- 页眉右端的「今天 x/x」 ----
+    setText(document.getElementById('calTodayNote'),
+        '今天 ' + pad2(today.m) + '/' + pad2(today.d));
+
+    // ---- 下一个假期（三处目标共用同一份计算结果） ----
+    applyHolidayCard(pickHolidayTarget());
+
+    renderHolidayCalendar(todayK, todayNum);
+    renderUpcomingHolidays(todayNum);
+}
+
+/**
+ * 速览弹窗的时间线：列出今天之后最近的几个假期段。
+ * 与月历分工不同 —— 月历回答「这个月怎么放」，
+ * 这里回答「接下来还有哪些假、各休几天」。
+ */
+function renderUpcomingHolidays(todayNum) {
+    const box = document.getElementById('hmUpcoming');
+    if (!box) return;
+    const runs = getHolidayRuns()
+        .map(r => {
+            const p = r.startKey.split('-').map(Number);
+            const sNum = cnDayNumber(bjDate(p[0], p[1], p[2]));
+            return { r: r, sNum: sNum, inDays: sNum - todayNum };
+        })
+        .filter(x => x.inDays >= 0)
+        .sort((a, b) => a.sNum - b.sNum)
+        .slice(0, 6);
+
+    if (!runs.length) {
+        box.innerHTML = '<div class="hm-item"><span class="hm-item-name" ' +
+            'style="color:var(--text-3)">暂无后续假期安排</span></div>';
+        return;
+    }
+    box.innerHTML = runs.map(x => {
+        const when = x.inDays === 0 ? '今天开始'
+            : x.inDays + ' 天后';
+        return '<div class="hm-item' + (x.r.confirmed ? '' : ' is-tent') + '">' +
+            '<span class="hm-item-date">' + x.r.startKey.slice(5) + '</span>' +
+            '<span class="hm-item-name">' + x.r.name +
+            (x.r.confirmed ? '' : '<span class="hm-item-tag">预估</span>') + '</span>' +
+            '<span class="hm-item-when">' + x.r.days + ' 天 · ' + when + '</span>' +
+            '</div>';
+    }).join('');
+}
+
+/**
+ * 渲染月历：月份标签 / 月历网格 / 当月清单。
+ * 只依赖 #hmTabs / #hmGrid / #hmList 三个 id，与「下一个假期」完全解耦。
+ */
+function renderHolidayCalendar(todayK, todayNum) {
+    const months = holidayMonths();
+    if (!hmState.year) { hmState.year = months[0].y; hmState.month = months[0].m; }
+    const tabs = document.getElementById('hmTabs');
+    tabs.innerHTML = '';
+    months.forEach(ym => {
+        const holi = getMonthHolidays(ym.y, ym.m).filter(x => x.kind === 'holiday').length;
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'hm-tab';
+        b.setAttribute('role', 'tab');
+        b.setAttribute('aria-selected',
+            String(ym.y === hmState.year && ym.m === hmState.month));
+        b.innerHTML = ym.y + '/' + ym.m +
+            (holi ? '<span class="cnt">· ' + holi + ' 天</span>' : '');
+        b.addEventListener('click', () => {
+            hmState.year = ym.y; hmState.month = ym.m;
+            renderHolidayCalendar(todayK, todayNum);
+        });
+        tabs.appendChild(b);
+    });
+
+    // ---- 月历网格 ----
+    const grid = document.getElementById('hmGrid');
+    grid.innerHTML = '';
+    ['一', '二', '三', '四', '五', '六', '日'].forEach((w, i) => {
+        const s = document.createElement('div');
+        s.className = 'hm-wd' + (i >= 5 ? ' we' : '');
+        s.textContent = w;
+        grid.appendChild(s);
+    });
+
+    const y = hmState.year, m = hmState.month;
+    const ft = new Date(bjDate(y, m, 1).getTime() + CN_OFFSET_MIN * 60000);
+    let offset = ft.getUTCDay() - 1;
+    if (offset < 0) offset = 6;
+    const daysInMonth = new Date(Date.UTC(y, m, 0)).getUTCDate();
+    const prevDays = new Date(Date.UTC(y, m - 1, 0)).getUTCDate();
+
+    const cells = [];
+    for (let i = offset - 1; i >= 0; i--) cells.push({ d: prevDays - i, out: true });
+    for (let d = 1; d <= daysInMonth; d++) cells.push({ d: d, out: false });
+    while (cells.length % 7 !== 0) {
+        cells.push({ d: cells.length - offset - daysInMonth + 1, out: true });
+    }
+
+    cells.forEach(c => {
+        const cell = document.createElement('div');
+        cell.className = 'hm-day';
+        const dowIdx = (ft.getUTCDay() + (c.out ? 0 : c.d - 1)) % 7;
+        if (dowIdx === 0 || dowIdx === 6) cell.classList.add('we');
+        if (c.out) cell.classList.add('out');
+
+        const key = holidayKey(y, m, c.d);
+        const h = c.out ? null : getHoliday(key);
+        if (h) {
+            const tentative = h.kind === 'tentative' || h.confirmed === false;
+            if (h.kind === 'workday') cell.classList.add('workday');
+            else if (tentative) cell.classList.add('tentative');
+            else cell.classList.add('holiday');
+            cell.title = h.name + (tentative ? '（预估，以官方公布为准）' : '');
+        }
+        if (!c.out && key === todayK) cell.classList.add('today');
+
+        // ---- 农历与节气 ----
+        // 相邻月份的补格用真实日期算，否则农历会串到别的月
+        const cellMonth = c.out
+            ? (c.d > 15 ? m - 1 : m + 1)
+            : m;
+        const cellDate = bjDate(y, cellMonth, c.d, 0, 0);
+        const lunar = getLunar(cellDate);
+        const term = getSolarTerm(cellDate);
+
+        // 假期名只在首日或名称变化时显示，避免连续多天重复同一个词
+        let label = '';
+        if (h) {
+            if (h.kind === 'workday') label = '班';
+            else {
+                const prev = getHoliday(holidayKey(y, m, c.d - 1));
+                if (!prev || prev.name !== h.name) label = h.name;
+            }
+        }
+
+        // 一格最多三行小字：假期名 / 节气 / 农历。
+        // 都是辅助信息，用同一套 0.56rem 小字，不抢日号的主体地位。
+        let extra = '';
+        if (term) extra += '<span class="hm-term">' + term.name + '</span>';
+        if (lunar) extra += '<span class="hm-lu" aria-hidden="true">' + lunar.label + '</span>';
+
+        cell.innerHTML = '<span class="hm-n">' + c.d + '</span>' +
+            (label ? '<span class="hm-lb">' + label + '</span>' : '') +
+            extra;
+        cell.setAttribute('role', 'gridcell');
+
+        // 读屏用的完整说法：公历 + 农历 + 节气 + 假期
+        const parts = [y + ' 年 ' + m + ' 月 ' + c.d + ' 日'];
+        if (lunar) parts.push('农历' + lunar.monthName + lunar.dayName);
+        if (term) parts.push(term.name + (term.time ? ' ' + term.time : ''));
+        if (h) parts.push(h.name);
+        cell.setAttribute('aria-label', parts.join('，'));
+
+        grid.appendChild(cell);
+    });
+
+    // ---- 当月清单 ----
+    const list = document.getElementById('hmList');
+    list.innerHTML = '';
+    const items = getMonthHolidays(y, m);
+    if (!items.length) {
+        const empty = document.createElement('div');
+        empty.className = 'hm-item';
+        empty.innerHTML = '<span class="hm-item-name" style="color:var(--text-3)">本月无法定假日</span>';
+        list.appendChild(empty);
+    }
+    items.forEach(h => {
+        const row = document.createElement('div');
+        const hy = Number(h.date.slice(0, 4)),
+              hmm = Number(h.date.slice(5, 7)),
+              hd = Number(h.date.slice(8, 10));
+        const diff = cnDayNumber(bjDate(hy, hmm, hd)) - todayNum;
+        const when = diff === 0 ? '今天' : diff > 0 ? diff + ' 天后' : '已过';
+        const tentative = h.kind === 'tentative' || h.confirmed === false;
+        row.className = 'hm-item' + (tentative ? ' is-tent' : '');
+        row.innerHTML =
+            '<span class="hm-item-date">' + pad2(hmm) + '/' + pad2(hd) + '</span>' +
+            '<span class="hm-item-name">' + h.name + '</span>' +
+            (tentative ? '<span class="hm-item-tag">预估</span>' : '') +
+            (h.kind === 'workday' ? '<span class="hm-item-tag">调休</span>' : '') +
+            '<span class="hm-item-when">' + when + '</span>';
+        list.appendChild(row);
+    });
+}
+
+/**
+ * 需要展示的月份。
+ *
+ * 原先的做法是「当月 + 之后两个月」再补「之后最早有安排的三个月」，
+ * 而补的那部分只含有假期的月份 —— 于是 2027/3 被跳过，
+ * 标签呈现为 10、11、12、1、2、4，用户读到的就是「3 月被吃了」。
+ *
+ * 现在改为**连续区间**：从当月起连续 7 个月；若这 7 个月里就有假期，
+ * 且下一个有安排的月份落在其后 6 个月内，就把区间顺延到覆盖它。
+ * 于是既不会漏月，也不会拉成一长条（上限 13 个月）。
+ */
+function holidayMonths() {
+    const today = bjToday();
+    const startScore = today.y * 12 + (today.m - 1);
+    let endScore = startScore + 6;                    // 连续 7 个月
+
+    const holidayScores = holidayTable.days
+        .map(d => Number(d.date.slice(0, 4)) * 12 + (Number(d.date.slice(5, 7)) - 1))
+        .filter(s => s >= startScore)
+        .sort((a, b) => a - b);
+
+    // 区间内是否已经有假期；有则顺延到「下一个有安排的月份」
+    const hasHolidayInside = holidayScores.some(s => s <= endScore);
+    if (hasHolidayInside) {
+        const nextOutside = holidayScores.find(s => s > endScore);
+        if (nextOutside !== undefined && nextOutside <= endScore + 6) {
+            endScore = Math.min(nextOutside, startScore + 12);
+        }
+    }
+
+    const list = [];
+    for (let s = startScore; s <= endScore; s++) {
+        list.push({ y: Math.floor(s / 12), m: (s % 12) + 1 });
+    }
+    return list;
+}
+
+/** 异步覆盖数据：成功则重渲染，失败静默 */
+function loadHolidayData() {
+    if (location.protocol !== 'http:' && location.protocol !== 'https:') return;
+    fetch('./data/holidays.json', { cache: 'no-cache' })
+        .then(r => (r.ok ? r.json() : null))
+        .then(data => {
+            if (data && setHolidayData(data)) renderHoliday();
+        })
+        .catch(() => { /* 静默：保留内置兜底数据 */ });
+}
+
+/**
+ * 异步覆盖节气数据：成功则重渲染日历，失败静默。
+ *
+ * 与 loadHolidayData 同一套策略：lunar.js 里有一份同内容的兜底表，
+ * 任何时刻都能画出节气；网络只负责「可能更新一点」。
+ * 放在 gaokao.js 而不是 lunar.js：lunar.js 是纯函数模块，
+ * 不发起请求，便于单独验证。
+ */
+function loadSolarTermsData() {
+    if (location.protocol !== 'http:' && location.protocol !== 'https:') return;
+    fetch(solarTermsDataUrl(), { cache: 'no-cache' })
+        .then(r => (r.ok ? r.json() : null))
+        .then(data => {
+            if (data && setSolarTermsData(data)) {
+                // 节气只影响月历格子，重画当前月即可
+                renderHolidayCalendar(
+                    holidayKey(bjToday().y, bjToday().m, bjToday().d),
+                    cnDayNumber(bjDate(bjToday().y, bjToday().m, bjToday().d)));
+            }
+        })
+        .catch(() => { /* 静默：保留内置兜底数据 */ });
+}
+
+function openHoliday() {
+    if (!holidayModal) return;
+    lastFocusedBeforeHoliday = document.activeElement;
+    renderHoliday();
+    holidayModal.classList.add('open');
+    holidayModal.setAttribute('aria-hidden', 'false');
+    lockScroll(true);
+    const btn = document.getElementById('holidayClose');
+    if (btn) btn.focus();
+}
+
+function closeHoliday() {
+    if (!holidayModal || !holidayModal.classList.contains('open')) return;
+    holidayModal.classList.remove('open');
+    holidayModal.setAttribute('aria-hidden', 'true');
+    lockScroll(false);
+    if (lastFocusedBeforeHoliday && lastFocusedBeforeHoliday.focus) {
+        lastFocusedBeforeHoliday.focus();
+    }
+    lastFocusedBeforeHoliday = null;
+}
+
+(function initHoliday() {
+    const btn = document.getElementById('holidayBtn');
+    if (btn) btn.addEventListener('click', openHoliday);
+    // 首页「下一个假期」卡片里的「日历 ›」也走同一个弹窗
+    const cardBtn = document.getElementById('holidayCardBtn');
+    if (cardBtn) cardBtn.addEventListener('click', openHoliday);
+    const close = document.getElementById('holidayClose');
+    if (close) close.addEventListener('click', closeHoliday);
+    if (holidayModal) {
+        holidayModal.addEventListener('click', (e) => {
+            if (e.target === holidayModal) closeHoliday();
+        });
+    }
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && holidayModal.classList.contains('open')) {
+            e.stopPropagation();
+            closeHoliday();
+        }
+    });
+    loadHolidayData();
+    loadSolarTermsData();
+})();
+
+// ------------------------------------------------------------
+// 首屏主题落地
+// 放在文件末尾而不是主题段落里：applyTheme() 内部会视情况调用
+// updateFullscreen() / updatePipContent()，而 fsOverlay、pipWindow
+// 的声明在本文件中位于主题段落之后。放在末尾可确保此时
+// 所有 const/let 都已初始化，不再依赖 typeof 守卫。
+// ------------------------------------------------------------
+applyTheme();
+
+// ------------------------------------------------------------
+// 首屏节假日落地
+// v2.3.0 起「下一个假期」是首页左栏的常驻卡片，
+// 不再等到用户点开弹窗才有内容 —— 所以启动时就要渲染一次。
+// renderHoliday() 内部会同时写首页卡片与弹窗，两处永远一致。
+// ------------------------------------------------------------
+try {
+    renderHoliday();
+} catch (err) {
+    // 节假日只是附加信息，渲染失败不应影响倒计时主功能
+    console.warn('[gaokao] 首页假期卡渲染失败：', err && err.message);
 }

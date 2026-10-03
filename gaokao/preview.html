@@ -1,0 +1,2328 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>设计预览 · 高考倒计时</title>
+<meta name="robots" content="noindex, nofollow">
+<style>
+/* ============================================================
+   设计预览（自包含单文件）
+   用途：在真实数据与真实倒计时下比较 4 套主题 × 3 种视口 × 3 档字号。
+   注意：本文件不参与线上部署逻辑，不引用 time.js / gaokao.js / style.css。
+   示例数据以北京时间为准，与 time.js 的约定保持一致。
+   ============================================================ */
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+
+/* ---------- 工具条自身（不随主题变化） ---------- */
+body {
+  background: #0a0c10;
+  color: #c9d1d9;
+  font: 14px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+        "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+  min-height: 100vh;
+}
+.shell-bar {
+  position: sticky; top: 0; z-index: 500;
+  background: rgba(10,12,16,.86);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid #232a33;
+  padding: 10px 16px;
+}
+.shell-bar-inner {
+  max-width: 1400px; margin: 0 auto;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px;
+}
+.shell-brand { font-weight: 700; letter-spacing: 1px; color: #e6edf3; margin-right: 4px; }
+.shell-brand small { display:block; font-weight: 400; font-size: 11px; color: #8b949e; letter-spacing: 0; }
+.shell-group { display: flex; align-items: center; gap: 6px; }
+.shell-group > .gl {
+  font-size: 11px; color: #6e7681; letter-spacing: 1px; margin-right: 2px;
+  text-transform: uppercase;
+}
+.shell-btn {
+  appearance: none; border: 1px solid #2c3540; background: #141a21; color: #c9d1d9;
+  border-radius: 3px; padding: 6px 11px; font: inherit; font-size: 12.5px;
+  cursor: pointer; transition: .15s; white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.shell-btn:hover { border-color: #46525f; background: #1b232c; }
+.shell-btn[aria-pressed="true"], .shell-btn.on {
+  border-color: #6ea8fe; color: #cfe3ff; background: #16212f;
+  box-shadow: 0 0 0 1px rgba(110,168,254,.35) inset;
+}
+.sw { display: inline-flex; border-radius: 2px; overflow: hidden; border: 1px solid rgba(255,255,255,.18); }
+.sw i { width: 9px; height: 14px; display: block; }
+
+/* ---------- 模拟视口 ---------- */
+.stage-wrap { max-width: 1400px; margin: 22px auto 60px; padding: 0 16px; }
+.browser {
+  margin: 0 auto; background: #12161c; border: 1px solid #232a33;
+  border-radius: 6px; overflow: hidden; transition: max-width .25s ease;
+  box-shadow: 0 24px 60px rgba(0,0,0,.5);
+}
+.browser[data-w="desktop"] { max-width: 1280px; }
+.browser[data-w="tablet"]  { max-width: 834px; }
+/* 手机档：竖屏是窄条，横屏必须放开宽度 ——
+   写死 390px 会让横屏手机被伪装成竖条，横屏布局根本没机会生效。 */
+.browser[data-w="phone"]   { max-width: 430px; }
+@media (orientation: landscape) {
+  .browser[data-w="phone"] { max-width: 100%; }
+  .browser[data-w="tablet"] { max-width: 100%; }
+}
+.chrome {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px; background: #171c23; border-bottom: 1px solid #232a33;
+}
+.chrome .dots { display: flex; gap: 6px; }
+.chrome .dots i { width: 10px; height: 10px; border-radius: 50%; background: #2f3945; display: block; }
+.chrome .url {
+  flex: 1; background: #0e1218; border: 1px solid #232a33; border-radius: 999px;
+  padding: 4px 12px; font-size: 11.5px; color: #7d8894; letter-spacing: .2px;
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+}
+.shell-note {
+  max-width: 1400px; margin: 14px auto 0; padding: 0 16px;
+  font-size: 12.5px; color: #7d8894;
+}
+.shell-note b { color: #c9d1d9; font-weight: 600; }
+/* 截图/比较模式：隐藏工具条与说明，只留页面本体 */
+body.hide-bar .shell-bar,
+body.hide-bar .shell-note { display: none; }
+body.hide-bar .stage-wrap { margin: 0 auto; padding: 0; }
+.shell-note code {
+  background: #141a21; border: 1px solid #232a33; border-radius: 5px;
+  padding: 1px 6px; font-size: 11.5px; color: #a9b4c0;
+}
+
+/* ============================================================
+   页面主题变量
+   —— 生产实现只需把这一层挂到 html[data-theme] 上，其余 CSS 全部复用。
+   ============================================================ */
+.page {
+  /* 圆角刻意见三档，不做「一圆到底」——统一大圆角是机器味的主要来源 */
+  --r-sharp: 2px;    /* 标签、图章、进度段 */
+  --r-btn: 5px;      /* 按钮、chip：接近直角 */
+  --r-card: 12px;    /* 卡片：唯一的大圆角 */
+  --r-pill: 999px;   /* 仅用于状态徽章 */
+  --radius-sm: 4px; --radius-md: 6px; --radius-lg: 12px; --radius-full: 999px;
+  --tr: .2s ease;
+  --bd: 1.5px;       /* 描边宽度：用实色描边替代柔和阴影 */
+  /* 展示模式的字号是 JS 实测后写进来的内联值，退出时会瞬时复位 ——
+     没有过渡的话，用户看到的就是「字莫名变大」。
+     字体相关的过渡不算装饰性动效，prefers-reduced-motion 下也保留。 */
+  --tr-type: .28s cubic-bezier(.4, 0, .2, 1);
+
+  /* 字号系数：1 单位 = 容器宽度的 1%（cqw）。
+     用容器宽度而不是视口宽度，数字才不会在窄卡片里溢出。
+     旧浏览器回退为 vw 版本，系数稍保守。 */
+  --n: 24;
+  --n-fallback: 22vw;
+  --u: 4.6;
+
+  /* Hero 配色：默认「跟卡片一样」，只有露营主题把它改成整块实色 */
+  --hero-bg: var(--bg-card);
+  --hero-fg: var(--text-2);
+  --hero-num: var(--accent);
+  --hero-accent: var(--accent);
+  --card-tint: var(--bg-card);
+  --card-accent: var(--border-strong);
+  --info-block: var(--bg-soft);
+  --info-block-fg: var(--text);
+  /* 「实色卡」的中性兜底：其他主题上等于普通卡片，所以彩块类可安全复用 */
+  --card-solid-bg: var(--bg-card);
+  --card-solid-fg: var(--text);
+  --card-solid-line: var(--border);
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+               "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  --font-serif: "Songti SC", "Noto Serif SC", "Source Han Serif SC", STSong,
+                SimSun, Georgia, serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+               "Liberation Mono", monospace;
+
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 22px; --s6: 30px;
+
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  min-height: 560px;
+  padding: var(--s6) var(--s5) 0;
+  transition: background var(--tr), color var(--tr);
+}
+
+/* ---------- 主题 1：夜航（深色主导 · 我推荐） ---------- */
+.page[data-theme="night"] {
+  --bg: #0E1116;
+  --bg-soft: #141922;
+  --bg-card: #161B22;
+  --bg-card-hover: #1C232D;
+  --bg-inset: #0B0E13;
+  --text: #E6EDF3;
+  --text-2: #A7B4C2;
+  --text-3: #7C8896;
+  --accent: #F0B357;
+  --accent-weak: rgba(240,179,87,.14);
+  --accent-text: #0E1116;
+  --info: #5B9DF9;
+  --info-weak: rgba(91,157,249,.16);
+  --ok: #56D364;
+  --ok-weak: rgba(86,211,100,.14);
+  --border: #262D38;
+  --border-strong: #333C49;
+  --shadow: 0 2px 14px rgba(0,0,0,.45);
+  --shadow-lift: 0 10px 30px rgba(0,0,0,.5);
+  --ink: #F0B357;
+  --font-display: var(--font-sans);
+  --font-heading: var(--font-sans);
+  --on-light: 0;
+}
+/* ---------- 主题 2：砚台（暖纸 · 人文衬线） ---------- */
+.page[data-theme="ink"] {
+  --bg: #F5F1EA;
+  --bg-soft: #EFE8DE;
+  --bg-card: #FFFDFA;
+  --bg-card-hover: #FBF6EE;
+  --bg-inset: #FFFFFF;
+  --text: #2B2620;
+  --text-2: #6B6055;
+  --text-3: #8C8073;
+  --accent: #B5722E;
+  --accent-weak: rgba(181,114,46,.12);
+  --accent-text: #FFFFFF;
+  --info: #2E6B8F;
+  --info-weak: rgba(46,107,143,.12);
+  --ok: #2F7A45;
+  --ok-weak: rgba(47,122,69,.12);
+  --border: #E3D9CB;
+  --border-strong: #CDBFA9;
+  --shadow: 0 1px 6px rgba(80,60,30,.07);
+  --shadow-lift: 0 8px 26px rgba(80,60,30,.10);
+  --ink: #B5722E;
+  --font-display: var(--font-serif);
+  --font-heading: var(--font-serif);
+  --on-light: 1;
+}
+/* ---------- 主题 3：白板（极简高对比 · 单色强调） ---------- */
+.page[data-theme="board"] {
+  --bg: #FFFFFF;
+  --bg-soft: #F2F3F5;
+  --bg-card: #FFFFFF;
+  --bg-card-hover: #F7F8F9;
+  --bg-inset: #FFFFFF;
+  --text: #101214;
+  --text-2: #4B5359;
+  --text-3: #6E767D;
+  --accent: #D0322B;
+  --accent-weak: rgba(208,50,43,.10);
+  --accent-text: #FFFFFF;
+  --info: #1B6EF3;
+  --info-weak: rgba(27,110,243,.10);
+  --ok: #0F7B3E;
+  --ok-weak: rgba(15,123,62,.10);
+  --border: #DDE0E3;
+  --border-strong: #B9BFC5;
+  --shadow: 0 1px 3px rgba(0,0,0,.05);
+  --shadow-lift: 0 6px 18px rgba(0,0,0,.08);
+  --ink: #101214;
+  --font-display: var(--font-sans);
+  --font-heading: var(--font-sans);
+  --on-light: 1;
+}
+/* ---------- 主题 4：青瓷（冷调克制 · 靛青） ---------- */
+.page[data-theme="celadon"] {
+  --bg: #F2F5F4;
+  --bg-soft: #E7ECEA;
+  --bg-card: #FFFFFF;
+  --bg-card-hover: #F6F9F8;
+  --bg-inset: #FFFFFF;
+  --text: #1B2A28;
+  --text-2: #556866;
+  --text-3: #7A8C8A;
+  --accent: #0F6E68;
+  --accent-weak: rgba(15,110,104,.12);
+  --accent-text: #FFFFFF;
+  --info: #3557A8;
+  --info-weak: rgba(53,87,168,.12);
+  --ok: #2C7A4B;
+  --ok-weak: rgba(44,122,75,.12);
+  --border: #D8E0DE;
+  --border-strong: #B4C1BE;
+  --shadow: 0 1px 6px rgba(20,50,48,.06);
+  --shadow-lift: 0 8px 24px rgba(20,50,48,.09);
+  --ink: #0F6E68;
+  --font-display: var(--font-sans);
+  --font-heading: var(--font-sans);
+  --on-light: 1;
+  --hero-bg: var(--bg-card);
+  --hero-fg: var(--text-2);
+  --hero-num: var(--accent);
+  --hero-accent: var(--accent);
+  --card-tint: var(--bg-card);
+  --card-accent: var(--border-strong);
+  --info-block: var(--bg-soft);
+  --info-block-fg: var(--text);
+}
+/* ---------- 主题 5：露营（日落橙 + 天蓝 · 温暖户外） ---------- */
+.page[data-theme="camp"] {
+  --bg: #FFF6E9;
+  --bg-soft: #FCE9CE;
+  --bg-card: #FFFFFF;
+  --bg-card-hover: #FFFBF4;
+  --bg-inset: #FFF9F0;
+  --text: #3F342A;
+  --text-2: #7A6754;
+  --text-3: #9C8A76;
+  --accent: #E8892B;
+  --accent-weak: rgba(232,137,43,.14);
+  --accent-text: #FFFFFF;
+  --info: #5FB7D4;
+  --info-weak: rgba(95,183,212,.16);
+  --ok: #5E9E58;
+  --ok-weak: rgba(94,158,88,.14);
+  --border: #F0DFC4;
+  --border-strong: #E0BE8E;
+  --shadow: 0 2px 0 rgba(180,130,70,.10);
+  --shadow-lift: 0 6px 0 rgba(180,130,70,.13);
+  --ink: #E8892B;
+  --font-display: var(--font-sans);
+  --font-heading: var(--font-sans);
+  --on-light: 1;
+  /* 大胆用色：Hero 是整块实色，同页多色块靠这几个变量驱动。
+     前景色按 WCAG 对比度选过：
+       #1F1A12 on #E8892B ≈ 6.5:1（实色块上的正文）
+       #1F1A12 on #F7CE6B ≈ 10.9:1
+       #1F1A12 on #8FD3E8 ≈ 10.5:1
+       #1F1A12 on #A7D9A0 ≈  9.8:1
+       #A8500F on #FFF6E9 ≈ 5.6:1（浅底上的强调色文字）
+       #1F6B85 on #EAF7FB ≈ 6.0:1 */
+  --hero-bg: #E8892B;
+  --hero-fg: #1F1A12;
+  --hero-num: #FFFFFF;
+  --hero-accent: #FFFFFF;
+  --card-tint: #FFFBF3;
+  --card-accent: #E8892B;
+  --info-block: #8FD3E8;
+  --info-block-fg: #0A3A4A;
+  /* 同页多色块：四块实色各用一色，由卡片自身的 --card-solid-* 决定 */
+  --camp-sun: #E8892B;   /* 日橙 */
+  --camp-sky: #8FD3E8;   /* 天蓝 */
+  --camp-tree: #A7D9A0;  /* 草绿 */
+  --camp-sand: #F7CE6B;  /* 沙黄 */
+  --card-solid-fg: #1F1A12;
+  --card-solid-line: rgba(0,0,0,.14);
+  --on-block: #1F1A12;
+}
+
+/* 露营主题的页眉色由每张卡的内联变量决定，这里不再统一覆盖 */
+
+/* ---------- 字号档位：系数 × 容器宽度（cqw）---------- */
+.page[data-size="std"] { --fs-hero-sub: 1.05rem; --fs-name: 1.05rem; --n: 22; --u: 4.2; --n-fallback: 19vw; }
+.page[data-size="lg"]  { --fs-hero-sub: 1.3rem;  --fs-name: 1.2rem;  --n: 24; --u: 4.6; --n-fallback: 22vw; }
+.page[data-size="xl"]  { --fs-hero-sub: 1.7rem;  --fs-name: 1.4rem;  --n: 26; --u: 5.0; --n-fallback: 24vw; }
+
+/* ============================================================
+   页面内容
+   ============================================================ */
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
+
+/* 顶栏 */
+.pg-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: var(--s4); flex-wrap: wrap; margin-bottom: var(--s6);
+}
+.pg-title {
+  display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+}
+.pg-title h1 {
+  margin: 0; font-family: var(--font-heading); font-size: 1.5rem;
+  font-weight: 700; letter-spacing: 2px; color: var(--text);
+}
+.badge-cohort {
+  font-size: .72rem; font-weight: 600; letter-spacing: 1px;
+  color: var(--accent); background: var(--accent-weak);
+  border-radius: var(--radius-full); padding: 3px 10px;
+}
+.pg-clock {
+  font-family: var(--font-mono); font-size: .78rem; color: var(--text-3);
+  text-align: right; line-height: 1.5; letter-spacing: .5px;
+}
+.pg-clock b { color: var(--text-2); font-weight: 600; }
+
+/* ---------- 阶段轨道：一条连续的路径，节点是路上的标记 ----------
+   节点尺寸由 --dot 统一驱动，连接线用同一个变量定位，
+   避免「线在 top:11px、节点中心在 5.5px」这类对不齐的硬编码。 */
+.rail {
+  margin-bottom: var(--s6);
+  background: var(--card-tint); border: var(--bd) solid var(--border);
+  border-radius: var(--r-card);
+  padding: 16px 16px 14px;
+  box-shadow: var(--shadow);
+  --dot: 11px;
+}
+.rail-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 12px; margin-bottom: 20px;
+}
+.rail-head .rt {
+  font-size: .72rem; letter-spacing: 2.4px; color: var(--text-3); font-weight: 700;
+}
+.rail-head .rt::before {
+  content: ''; display: inline-block; width: 4px; height: 11px;
+  background: var(--accent); border-radius: var(--r-sharp);
+  margin-right: 8px; vertical-align: -1px;
+}
+.rail-head .rh { font-size: .72rem; color: var(--text-3); display: inline-flex; align-items: center; gap: 8px; }
+/* 「回到当前阶段」—— 点选历史阶段后必须给出可见的出口，
+   否则用户会以为自己看的就是当前状态（原实现正是这个问题）。 */
+.rail-back {
+  appearance: none; font: inherit; font-size: .68rem; font-weight: 700;
+  cursor: pointer; padding: 2px 8px;
+  color: var(--accent); background: var(--accent-weak);
+  border: 1.5px solid transparent; border-radius: var(--r-sharp);
+  transition: var(--tr);
+}
+.rail-back:hover { border-color: var(--accent); }
+.rail-back[hidden] { display: none; }
+/* 正在查看非当前阶段时，轨道头部换成强调色，明确「这不是当前状态」 */
+.rail.is-focused { border-color: var(--accent); }
+.rail.is-focused .rail-head .rh { color: var(--accent); font-weight: 700; }
+/* 关键：不给 .rail-steps 加 overflow:hidden —— 那会把旋转后超出盒子的节点顶部裁掉。
+   横向滚动用 overflow-x:auto + overflow-y:visible（:auto 在单轴时另一轴会变 auto，
+   所以这里改由 padding 留出空间，不用 overflow）。 */
+.rail-steps { display: flex; padding: 5px 0 2px; }
+
+.step {
+  flex: 1 1 0; min-width: 66px; position: relative;
+  background: none; border: 0; padding: 0 2px; cursor: pointer;
+  font-family: inherit; color: var(--text-2);
+  display: flex; flex-direction: column; align-items: center;
+  transition: var(--tr);
+}
+/* 连接线：与节点垂直中心对齐（top = --dot / 2） */
+.step::before {
+  content: ''; position: absolute;
+  top: calc(var(--dot) / 2); left: -50%; width: 100%; height: 2px;
+  transform: translateY(-1px);
+  background: var(--border); z-index: 0;
+}
+.step:first-child::before { display: none; }
+
+/* 节点：旋转 45° 的方块（菱形），与通用 UI 的圆形拉开距离 */
+.step .dot {
+  width: var(--dot); height: var(--dot); flex: none;
+  margin-bottom: 12px;
+  background: var(--bg-card); border: 2px solid var(--border-strong);
+  border-radius: var(--r-sharp);
+  transform: rotate(45deg); position: relative; z-index: 1;
+  transition: var(--tr);
+}
+.step .nm {
+  display: block; font-size: .82rem; font-weight: 700; color: var(--text-2);
+  letter-spacing: 1px;
+}
+.step .sub {
+  display: block; font-size: .64rem; color: var(--text-3); margin-top: 3px;
+  letter-spacing: .3px; font-variant-numeric: tabular-nums;
+}
+
+/* 已结束：整段降噪，节点填实心，不要绿色对勾 */
+.step.done .dot { background: var(--border-strong); border-color: var(--border-strong); }
+.step.done .nm { color: var(--text-3); font-weight: 600; }
+.step.done .sub { color: var(--text-3); }
+.step.done::before { background: var(--border-strong); }
+
+/* 进行中：强调色实心 + 外圈光晕（只有真正在考的那个阶段） */
+.step.live .dot {
+  background: var(--accent); border-color: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-weak);
+}
+.step.live .nm { color: var(--accent); }
+.step.live::before { background: var(--border-strong); }
+
+/* 当前：下一个尚未开始的阶段 —— 强调色描边，比「进行中」弱一档，
+   这样「已结束 / 进行中 / 下一个」三种状态一眼能分开。 */
+.step.now .dot {
+  background: var(--bg-card); border-color: var(--accent); border-width: 3px;
+}
+.step.now .nm { color: var(--accent); }
+.step.now::before { background: var(--border-strong); }
+
+/* 未来：虚线节点，表示「还没到」 */
+.step.todo .dot { border-style: dashed; }
+
+.step:hover .nm { color: var(--text); }
+.step:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+/* 被点选的节点：名称下方一条短线（demo 交互反馈） */
+.step.picked .nm::after {
+  content: ''; display: block; height: 2px; background: var(--accent);
+  margin: 3px auto 0; width: 70%;
+}
+
+/* 双栏主区 */
+.pg-main { display: grid; grid-template-columns: 1fr; gap: var(--s5); align-items: start; }
+
+/* 卡片通用 —— 实色描边 + 极浅的硬阴影，不用柔和投影 */
+.card {
+  background: var(--bg-card);
+  border: var(--bd) solid var(--border);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow);
+  padding: var(--s5); margin-bottom: var(--s5);
+  transition: background var(--tr), border-color var(--tr);
+  /* 每张卡自己的色块色：只改这个变量就能给单卡换色，组件 CSS 不用动 */
+  --card-accent: var(--border-strong);
+}
+.card:last-child { margin-bottom: 0; }
+.card--accent { --card-accent: var(--accent); }
+.card--info   { --card-accent: var(--info); }
+.card--ok     { --card-accent: var(--ok); }
+
+/* 彩块：整张卡是实色时，内部所有文字/线条改走卡自身的配色变量 */
+.card--solid {
+  background: var(--card-solid-bg, var(--card-tint));
+  border-color: transparent;
+  --text: var(--card-solid-fg, var(--text));
+  --text-2: var(--card-solid-fg, var(--text-2));
+  --text-3: var(--card-solid-fg, var(--text-3));
+  --border: var(--card-solid-line, var(--border));
+  --border-strong: var(--card-solid-line, var(--border-strong));
+}
+.card--tinted { background: var(--card-tint); }
+.page[data-theme="camp"] .rail {
+  /* 地图网格纹理：纯 CSS，零资源 */
+  background-image:
+    repeating-linear-gradient(0deg, rgba(232,137,43,.10) 0 1px, transparent 1px 22px),
+    repeating-linear-gradient(90deg, rgba(232,137,43,.10) 0 1px, transparent 1px 22px);
+}
+.page[data-theme="camp"] .cal-grid,
+.page[data-theme="camp"] .rail-steps,
+.page[data-theme="camp"] .nh-strip { position: relative; }
+
+/* 日程卡的斜纹底：让卡片之间有材质差，而不是同一种白 */
+.card--texture {
+  background-image: repeating-linear-gradient(135deg,
+    var(--card-solid-bg, var(--bg-soft)) 0 14px,
+    transparent 14px 28px);
+}
+[data-theme="camp"] .card--texture { background-color: #FFFBF3; }
+
+/* 形状分化（第 4 张牌）：缺角 + 可见折边。
+   上一版只用 clip-path 切掉 20px，结果是「看不见」——切口本身没有对比，
+   而 clip-path 又裁掉了投影，等于什么都没画。
+   现在改成：切角 + 在缺角处画一条带对比的斜边（::after 压住切口），
+   这样缺角是「被折起来」而不是「被裁掉」，形状语言才立得住。
+   注意：clip-path 在圆角与阴影之后应用，外投影会被裁 ——
+   所以本类只用在不依赖外投影的卡上。 */
+.card--notch {
+  position: relative;
+  clip-path: polygon(
+    0 0,
+    100% 0,
+    100% calc(100% - var(--notch, 30px)),
+    calc(100% - var(--notch, 30px)) 100%,
+    0 100%
+  );
+}
+.card--notch::after {
+  content: '';
+  position: absolute;
+  right: 0; bottom: 0;
+  width: calc(var(--notch, 30px) * 1.42);
+  height: calc(var(--notch, 30px) * 1.42);
+  background: var(--border-strong);
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+  pointer-events: none;
+}
+/* 卡内页眉：一块窄实色横条，给整卡一个明确的「色块起点」。
+   注意：这里必须写 var(--card-accent)，不能写 currentColor ——
+   currentColor 会解析为元素自身的 color，而该 color 又来自父级继承，
+   等于颜色自己指向自己，浏览器会回退成背景色，横条就「消失」了。 */
+.card-band {
+  margin: calc(var(--s5) * -1) calc(var(--s5) * -1) var(--s4);
+  padding: 9px var(--s5);
+  background: var(--card-accent);
+  color: var(--accent-text);
+  border-radius: var(--r-card) var(--r-card) 0 0;
+  font-size: .72rem; font-weight: 800; letter-spacing: 2.4px;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+}
+.card--solid .card-band {
+  background: var(--band-solid-bg, rgba(255,255,255,.62));
+  color: var(--card-solid-fg, inherit);
+}
+.card-band .cb-act {
+  appearance: none; font: inherit; font-size: .68rem; font-weight: 700;
+  letter-spacing: .5px; cursor: pointer;
+  border: 1.5px solid var(--band-solid-fg, var(--accent-text));
+  border-radius: var(--r-sharp);
+  background: transparent; color: inherit; padding: 2px 8px;
+}
+.card-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; margin-bottom: var(--s4); flex-wrap: wrap;
+}
+.card-title {
+  margin: 0; font-size: .72rem; letter-spacing: 2.4px; font-weight: 700;
+  color: var(--text-3);
+}
+/* 标题左侧的小竖条：用强调色标记，替代下划线 */
+.card-title::before {
+  content: ''; display: inline-block; width: 4px; height: 11px;
+  background: var(--accent); border-radius: var(--r-sharp);
+  margin-right: 8px; vertical-align: -1px;
+}
+/* 实色卡上的标题：跟卡的前景色走，否则浅色字压在实色底上会糊成一片 */
+.card--solid .card-title { color: var(--card-solid-fg, var(--text-3)); opacity: .85; }
+.card--solid .card-title::before { background: var(--card-solid-fg, var(--accent)); }
+.card-act {
+  appearance: none; border: var(--bd) solid var(--border-strong); background: transparent;
+  color: var(--text-2); font: inherit; font-size: .72rem; cursor: pointer;
+  border-radius: var(--r-btn); padding: 3px 10px; transition: var(--tr);
+}
+.card-act:hover { border-color: var(--accent); color: var(--accent); }
+
+/* Hero 倒计时 —— 数字直接坐在背景上，不套圆角盒子。
+   container-type: inline-size 让下面的 cqw 字号以「卡片自身宽度」为基准，
+   这是「调大字号不会溢出」的根本保证。 */
+.hero {
+  text-align: left;
+  container-type: inline-size;
+  background: var(--hero-bg);
+  border-color: transparent;
+}
+.hero .h-target {
+  font-size: .78rem; letter-spacing: 2px; color: var(--hero-fg); font-weight: 600;
+  margin-bottom: 2px;
+}
+.hero .h-date {
+  font-size: .72rem; color: var(--hero-fg); opacity: .8; letter-spacing: .4px; margin-bottom: var(--s3);
+}
+.hero .h-num {
+  display: flex; align-items: baseline; gap: 8px;
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1;
+  line-height: .92; color: var(--hero-num);
+  flex-wrap: nowrap; min-width: 0;
+  white-space: nowrap;          /* 关键：数字本身绝不折行，否则整行会塌缩 */
+}
+/* 回退写法（不支持容器查询的浏览器）：按视口宽度，系数偏保守 */
+.hero .h-num .n {
+  font-size: var(--n-fallback);
+  font-weight: 800; letter-spacing: -2px;
+  transition: color .18s ease;
+  min-width: 0; white-space: nowrap;
+}
+/* 支持容器查询时：字号 = 系数 × 卡片宽度，永不溢出 */
+@container (min-width: 1px) {
+  .hero .h-num .n { font-size: calc(var(--n) * 1cqw); }
+  .hero .h-num .u { font-size: calc(var(--u) * 1cqw); }
+}
+.hero .h-num .u {
+  font-weight: 700; color: var(--hero-fg); letter-spacing: 2px;
+}
+.hero .h-num .n.flash {
+  color: var(--hero-fg);
+  animation: numTick .28s ease-out;
+}
+/* 精确到秒的一条：左侧细线，不用虚线分隔 */
+.hero .h-sub {
+  margin-top: var(--s3); padding-left: 12px;
+  border-left: 3px solid var(--hero-num);
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  font-family: var(--font-mono); font-size: 1rem; color: var(--hero-fg);
+  font-variant-numeric: tabular-nums;
+}
+.hero .h-sub .lbl { font-family: var(--font-sans); font-size: .68rem; opacity: .7; letter-spacing: 1px; }
+.hero .h-sub .sep { opacity: .5; }
+.hero .h-sub .u2 { font-size: .68rem; opacity: .7; margin-left: 2px; }
+
+/* 状态条 */
+.stat-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: var(--s4); }
+.pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: .72rem; font-weight: 600; letter-spacing: .4px;
+  border-radius: var(--r-sharp); padding: 4px 9px;
+  background: var(--bg-soft); color: var(--text-2);
+  border: var(--bd) solid var(--border);
+}
+.pill.accent { background: var(--accent-weak); color: var(--accent); border-color: transparent; }
+.pill.info { background: var(--info-weak); color: var(--info); border-color: transparent; }
+.pill.ok { background: var(--ok-weak); color: var(--ok); border-color: transparent; }
+/* Hero 内部的 pill 需要跟 Hero 的前景色走（实色 Hero 上不能再用浅底浅字）。
+   rgba(255,255,255,.55) 叠在 #E8892B 上约 #F4C489，配 #2E2318 约 8.4:1。 */
+.hero .stat-row .pill {
+  background: rgba(255,255,255,.55);
+  color: var(--hero-fg);
+  border-color: rgba(0,0,0,.16);
+}
+[data-theme="night"] .hero .stat-row .pill {
+  background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.16);
+}
+.pill .dt { width: 6px; height: 6px; border-radius: var(--r-sharp); background: currentColor; }
+.pill .dt.pulse { animation: pulseDot 1.6s ease-in-out infinite; }
+/* 跳转/编辑的可见反馈：给按钮一个「确实做了什么」的交代 */
+@keyframes cardFlash {
+  0%   { box-shadow: 0 0 0 0 var(--accent-weak); }
+  35%  { box-shadow: 0 0 0 6px var(--accent-weak); }
+  100% { box-shadow: 0 0 0 0 var(--accent-weak); }
+}
+.card.flash-card { animation: cardFlash .85s ease-out; }
+.card.is-editing { outline: 2px dashed var(--accent); outline-offset: 3px; }
+.card:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+/* 数字跳变提示：只改颜色与透明度、不改位置，时间很短，避免整页「闪」一下 */
+@keyframes numTick {
+  from { opacity: .55; }
+  to   { opacity: 1; }
+}
+
+@keyframes pulseDot { 0%,100% { opacity: 1; } 50% { opacity: .25; } }
+
+/* 下个假日 */
+.next-hol {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--s4); flex-wrap: wrap;
+}
+.next-hol .nh-l { display: flex; align-items: center; gap: var(--s3); }
+/* 图章式方片：接近直角，色块 + 字，不做成圆角图标 */
+.nh-icon {
+  width: 38px; height: 38px; border-radius: var(--r-sharp); flex: none;
+  background: var(--accent); color: var(--accent-text);
+  display: grid; place-items: center; font-size: 1.05rem; font-weight: 800;
+}
+.nh-name { font-size: 1.02rem; font-weight: 800; color: var(--text); letter-spacing: .3px; }
+.nh-meta { font-size: .72rem; color: var(--text-3); margin-top: 2px; }
+.nh-r { text-align: right; }
+.nh-days {
+  font-family: var(--font-mono); font-size: 2rem; font-weight: 800;
+  color: var(--accent); font-variant-numeric: tabular-nums; line-height: 1;
+}
+.nh-days small { font-size: .68rem; font-family: var(--font-sans); color: var(--text-3); margin-left: 3px; font-weight: 600; }
+/* 假期进度：方段等分，不用圆头 */
+.nh-strip { display: flex; gap: 3px; margin-top: 12px; }
+.nh-strip i {
+  height: 6px; flex: 1; border-radius: 1px; background: var(--bg-soft); display: block;
+}
+.nh-strip i.on { background: var(--accent); }
+
+/* 当前 / 下一场 */
+.slot { display: flex; flex-direction: column; gap: var(--s3); }
+.slot-row { display: flex; align-items: center; gap: var(--s3); flex-wrap: wrap; }
+.slot-name { font-size: 1.15rem; font-weight: 700; color: var(--text); letter-spacing: 1px; }
+.slot-time { font-family: var(--font-mono); font-size: .82rem; color: var(--text-2); }
+.slot-dur { font-size: .7rem; color: var(--text-3); }
+.bar { height: 6px; border-radius: 3px; background: var(--bg-soft); overflow: hidden; }
+.bar > i { display: block; height: 100%; background: var(--accent); border-radius: 3px; transition: width 1s linear; }
+.bar.info > i { background: var(--info); }
+.bar-meta { display: flex; justify-content: space-between; font-size: .68rem; color: var(--text-3); font-family: var(--font-mono); }
+
+/* 日程 */
+.day-group { margin-bottom: var(--s4); }
+.day-group:last-child { margin-bottom: 0; }
+.day-head {
+  display: flex; align-items: center; gap: var(--s2); margin-bottom: var(--s2);
+}
+.day-head .dn {
+  font-family: var(--font-mono); font-size: .78rem; font-weight: 800;
+  color: var(--accent-text); background: var(--accent);
+  border-radius: var(--r-sharp); padding: 2px 7px;
+}
+.day-head .dd { font-size: .74rem; color: var(--text-3); letter-spacing: .5px; }
+.sess {
+  display: flex; align-items: center; gap: 8px; margin: var(--s3) 0 var(--s2);
+}
+.sess .ln { flex: 1; height: 1px; background: var(--border); }
+.sess .lb { font-size: .66rem; color: var(--text-3); letter-spacing: 2px; }
+
+/* 考试卡：左侧 3px 实色竖条做状态标记，不用整块淡色底 */
+.exam {
+  display: grid; grid-template-columns: 1fr auto; gap: 6px var(--s3);
+  align-items: center; padding: var(--s3) var(--s4);
+  background: var(--bg-card); border: var(--bd) solid var(--border);
+  border-left: 3px solid var(--border);
+  border-radius: var(--r-btn); margin-bottom: 6px; transition: var(--tr);
+}
+.exam:hover { background: var(--bg-card-hover); border-color: var(--border-strong); }
+.exam .ex-name { font-size: var(--fs-name, 1.05rem); font-weight: 700; color: var(--text); letter-spacing: .3px; }
+.exam .ex-meta {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  font-size: .72rem; color: var(--text-3); margin-top: 3px;
+}
+.exam .ex-meta .tm { font-family: var(--font-mono); color: var(--text-2); }
+.exam .ex-cd {
+  text-align: right; font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono); white-space: nowrap;
+}
+.exam .ex-cd .big { font-size: 1.5rem; font-weight: 800; color: var(--text); line-height: 1; }
+.exam .ex-cd .un { font-size: .68rem; font-family: var(--font-sans); color: var(--text-3); margin-left: 2px; }
+.exam .ex-cd .rest { display: block; font-size: .68rem; color: var(--text-3); margin-top: 3px; font-family: var(--font-sans); }
+.tag {
+  font-size: .62rem; font-weight: 600; letter-spacing: .4px;
+  border-radius: var(--r-sharp); padding: 2px 6px;
+  background: var(--bg-soft); color: var(--text-2);
+}
+.exam.selected { border-left-color: var(--accent); }
+.exam.selected .ex-name { color: var(--accent); }
+.exam.dimmed { opacity: .4; }
+.exam.dimmed .ex-name { text-decoration: line-through; text-decoration-color: var(--text-3); }
+.exam.done { opacity: .45; }
+.exam.now { border-left-color: var(--info); background: var(--info-weak); }
+
+/* 选科：接近直角的方块按钮，不用胶囊 */
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  appearance: none; font: inherit; cursor: pointer;
+  border: var(--bd) solid var(--border-strong); background: var(--bg-card);
+  color: var(--text-2); border-radius: var(--r-btn);
+  padding: 6px 12px; font-size: .8rem; font-weight: 700; letter-spacing: .5px;
+  transition: var(--tr);
+}
+.chip:hover { border-color: var(--accent); color: var(--accent); }
+.chip[aria-pressed="true"] {
+  background: var(--accent); border-color: var(--accent); color: var(--accent-text);
+}
+.chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.chip-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.chip-row .crl { font-size: .68rem; color: var(--text-3); letter-spacing: 1px; min-width: 30px; }
+.chips-hint { font-size: .7rem; color: var(--text-3); margin-top: 10px; }
+
+/* 日历 */
+.cal-month-tabs { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: var(--s4); }
+.mtab {
+  appearance: none; font: inherit; cursor: pointer;
+  border: var(--bd) solid var(--border); background: transparent; color: var(--text-2);
+  border-radius: var(--r-btn); padding: 4px 10px; font-size: .74rem;
+  font-weight: 700; letter-spacing: .4px; transition: var(--tr);
+}
+.mtab:hover { border-color: var(--accent); color: var(--accent); }
+.mtab[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+.mtab .cnt {
+  display: inline-block; margin-left: 5px; font-size: .64rem; opacity: .85;
+}
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+.cal-wd {
+  text-align: center; font-size: .66rem; color: var(--text-3);
+  padding-bottom: 6px; letter-spacing: 1px; font-weight: 700;
+}
+.cal-wd.we { color: var(--accent); }
+/* 日格：默认近乎直角，只有放假日给一个明显的圆角反差 */
+.cal-day {
+  position: relative; min-height: 56px; border-radius: 3px;
+  background: var(--bg-inset); border: 1px solid transparent;
+  padding: 5px 4px 4px; font: inherit; cursor: default;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  transition: var(--tr); overflow: hidden;
+}
+.cal-day .cd-n {
+  font-family: var(--font-mono); font-size: .82rem; font-weight: 600;
+  color: var(--text-2); line-height: 1.1; font-variant-numeric: tabular-nums;
+}
+.cal-day .cd-lb {
+  font-size: .58rem; line-height: 1.15; text-align: center; color: var(--text-3);
+  letter-spacing: .2px; max-width: 100%;
+}
+.cal-day.out { opacity: .3; }
+.cal-day.we .cd-n { color: var(--text-3); }
+/* 放假日：整格实色，圆角放大 —— 与周围方格的刻意反差 */
+.cal-day.holiday {
+  background: var(--accent); border-color: var(--accent);
+  border-radius: 8px;
+}
+.cal-day.holiday .cd-n { color: var(--accent-text); font-weight: 800; }
+.cal-day.holiday .cd-lb { color: var(--accent-text); font-weight: 700; opacity: .92; }
+.cal-day.workday { background: repeating-linear-gradient(45deg, transparent 0 4px, var(--bg-soft) 4px 8px); }
+.cal-day.workday .cd-n { color: var(--text-3); }
+.cal-day.workday .cd-lb { color: var(--text-3); font-weight: 700; }
+/* 今天：加粗描边 + 底部一个小方点 */
+.cal-day.today { border-color: var(--text); border-width: 2px; }
+.cal-day.today .cd-n::after {
+  content: ''; position: absolute; left: 50%; bottom: 3px; transform: translateX(-50%);
+  width: 4px; height: 2px; background: var(--text);
+}
+.cal-day.today.holiday .cd-n::after { background: var(--accent-text); }
+/* 待定：第二色（天蓝）整格 —— 让「未公布」也有颜色，但不与放假日混淆 */
+.cal-day.tentative {
+  background: var(--info-block); border-color: transparent; border-radius: 8px;
+}
+.cal-day.tentative .cd-n { color: var(--info-block-fg); font-weight: 800; }
+.cal-day.tentative .cd-lb { color: var(--info-block-fg); font-weight: 700; opacity: .9; }
+.cal-day .cd-tent {
+  position: absolute; top: 2px; right: 3px; font-size: .5rem;
+  color: var(--info-block-fg); opacity: .85; font-weight: 700;
+}
+.cal-legend {
+  display: flex; gap: var(--s4); flex-wrap: wrap;
+  margin-top: var(--s4); padding-top: var(--s3); border-top: var(--bd) solid var(--border);
+  font-size: .68rem; color: var(--text-3);
+}
+.cal-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.cal-legend i { width: 11px; height: 11px; border-radius: 2px; display: block; }
+.cal-legend i.h { background: var(--accent); }
+.cal-legend i.w { background: repeating-linear-gradient(45deg, transparent 0 3px, var(--bg-soft) 3px 6px); border: 1px solid var(--border); }
+.cal-legend i.t { border: 2px solid var(--text); }
+
+.hol-list { margin-top: var(--s3); }
+.hol-item {
+  display: flex; align-items: center; gap: var(--s3);
+  padding: 9px 2px; border-bottom: 1px solid var(--border); font-size: .82rem;
+}
+.hol-item:last-child { border-bottom: 0; }
+.hol-item .hi-date {
+  font-family: var(--font-mono); font-size: .74rem; color: var(--text-3);
+  min-width: 62px; flex: none;
+}
+.hol-item .hi-name { font-weight: 700; color: var(--text); flex: 1; }
+.hol-item .hi-cnt {
+  font-size: .72rem; color: var(--text-3); font-variant-numeric: tabular-nums;
+}
+.hol-item.is-tent .hi-name { color: var(--text-3); font-weight: 500; }
+.hol-item .hi-tag {
+  font-size: .6rem; padding: 1px 6px; border-radius: var(--r-sharp);
+  background: var(--bg-soft); color: var(--text-3); border: 1px dashed var(--border-strong);
+}
+
+/* 页脚 */
+.pg-footer {
+  margin-top: var(--s6); padding: var(--s4) 0 var(--s5);
+  border-top: var(--bd) solid var(--border); text-align: center;
+  font-size: .74rem; color: var(--text-3); letter-spacing: 2px;
+}
+
+/* ============================================================
+   响应式
+   ============================================================ */
+/* 布局维度（预留）：data-layout 只在「断点允许的范围内」生效，
+   断点始终是硬约束。后期要加新布局，只在这里追加一条规则，组件不用动。 */
+.page[data-layout="split"] .pg-main { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); }
+.page[data-layout="split"] .col-left { position: sticky; top: 14px; }
+.page[data-layout="stack"] .pg-main { grid-template-columns: minmax(0, 1fr); }
+.page[data-layout="focus"] .pg-main { grid-template-columns: minmax(0, 1fr); }
+.page[data-layout="focus"] .col-right { display: none; }
+
+.browser[data-w="desktop"] .pg-main { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); }
+.browser[data-w="desktop"] .col-left { position: sticky; top: 14px; }
+/* 平板档：两栏并排 */
+.browser[data-w="tablet"] .pg-main { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.browser[data-w="tablet"] .col-left,
+.browser[data-w="tablet"] .col-right { display: contents; }
+.browser[data-w="tablet"] .card { margin-bottom: 0; }
+/* 手机档：单列，Hero 置顶，其余按原有顺序堆叠 */
+.browser[data-w="phone"] .pg-main { grid-template-columns: minmax(0, 1fr); }
+
+/* 窄视口 */
+.browser[data-w="tablet"] .page,
+.browser[data-w="phone"] .page { padding: 20px 16px 0; }
+.browser[data-w="tablet"] .pg-title h1,
+.browser[data-w="phone"] .pg-title h1 { font-size: 1.2rem; letter-spacing: 1px; }
+.browser[data-w="phone"] .card { padding: var(--s4); border-radius: var(--radius-md); }
+.browser[data-w="phone"] .pg-header { gap: 10px; }
+.browser[data-w="phone"] .pg-clock { font-size: .7rem; }
+.browser[data-w="phone"] .cal-day { min-height: 44px; padding: 4px 2px; }
+.browser[data-w="phone"] .cal-day .cd-n { font-size: .74rem; }
+.browser[data-w="phone"] .cal-day .cd-lb { font-size: .52rem; }
+.browser[data-w="phone"] .exam { padding: 10px 12px; }
+.browser[data-w="phone"] .exam .ex-cd .big { font-size: 1.25rem; }
+.browser[data-w="phone"] .rail { padding: 12px 10px 16px; }
+.browser[data-w="phone"] .step { min-width: 60px; }
+.browser[data-w="phone"] .step .nm { font-size: .74rem; }
+.browser[data-w="phone"] .step .sub { font-size: .58rem; }
+
+/* ---- 展示模式（投屏）
+   结论：纯 CSS 无法可靠保证「一定装得下」。
+   vw/vh 是估算，容器查询也只能约束单个文本节点、管不了整列高度。
+   所以字号改由 JS 实测容器尺寸后反推（见脚本里的 fitDisplay()），
+   这里只负责结构与兜底值；JS 生效后会覆盖 --fit-* 这几个变量。       ---- */
+.page[data-mode="display"] {
+  padding: 0;
+  min-height: 100%;
+  min-height: 100dvh;
+  display: flex; flex-direction: column;
+  overflow: hidden;                 /* 展示模式不允许出现滚动条 */
+  --fit-num: min(23vw, 40vh, 20rem);
+  --fit-unit: min(5.5vw, 9vh, 4.5rem);
+  --fit-sub: min(4.2vw, 7vh, 3.4rem);
+}
+/* 进出展示模式时字号会变，加过渡避免「字莫名变大」的突变感。
+   这几条属性不涉及布局位移，不会引发整页重排动画。 */
+.hero .h-num .n,
+.hero .h-num .u,
+.hero .h-target,
+.hero .h-sub,
+.hero .h-sub .lbl,
+.display-foot {
+  transition: font-size var(--tr-type), opacity var(--tr-type), letter-spacing var(--tr-type);
+}
+/* 窄视口下页面内边距同样要清零 —— 否则会与 Hero 自己的 padding 叠加，
+   导致展示模式在手机档留白忽大忽小。 */
+.browser[data-w="tablet"] .page[data-mode="display"],
+.browser[data-w="phone"] .page[data-mode="display"] { padding: 0; }
+/* 展示模式下只保留大数字：其余区块整体隐藏。
+   注意 .col-left 里不止 Hero，还有「下一个假期」卡 —— 之前漏了它，
+   于是全屏时底部会露出一条假日的横条和文字。 */
+.page[data-mode="display"] .pg-header,
+.page[data-mode="display"] .rail,
+.page[data-mode="display"] .col-right,
+.page[data-mode="display"] .pg-footer,
+.page[data-mode="display"] .card-head,
+.page[data-mode="display"] .stat-row,
+.page[data-mode="display"] .h-date,
+.page[data-mode="display"] #holidayCard,
+.page[data-mode="display"] .col-left > .card:not(.hero) { display: none; }
+.page[data-mode="display"] .pg-main {
+  display: flex; flex-direction: column;
+  flex: 1 1 auto; min-height: 0;    /* 允许内部收缩，而不是把父级撑破 */
+  width: 100%;
+}
+.page[data-mode="display"] .col-left {
+  position: static;
+  flex: 1 1 auto; min-height: 0; width: 100%;
+  display: flex; flex-direction: column;
+}
+.page[data-mode="display"] .card {
+  border: 0; box-shadow: none; background: transparent; padding: 0; margin: 0;
+  width: 100%;
+}
+.page[data-mode="display"] .hero {
+  flex: 1 1 auto; min-height: 0; width: 100%;
+  display: flex; flex-direction: column;
+  justify-content: center; align-items: center;
+  text-align: center;
+  /* 两侧留白必须给足：展示模式去掉了 .page 的内边距，
+     这里若只留 3vw，窄屏上数字会直接贴到视口边缘。 */
+  padding: 3vh clamp(20px, 6vw, 120px);
+  box-sizing: border-box;
+  background: transparent;
+}
+.page[data-mode="display"] .hero .h-target {
+  font-size: var(--target-size, min(2.6vw, 4.4vh, 2.2rem));
+  letter-spacing: clamp(2px, .8vmin, 10px);
+  color: var(--text-2); margin-bottom: 1.5vh;
+  white-space: nowrap;          /* 标签绝不能折行 */
+}/* 数字行：nowrap 必须同时加在容器和文本上 ——
+   flex-wrap:nowrap 只管「flex 项之间」不换行，管不了「项内文本」折行，
+   文本一折行整行就塌缩、align-items 随之失效，表现为左对齐+两行。 */
+.page[data-mode="display"] .hero .h-num {
+  justify-content: center; align-items: center;
+  gap: clamp(6px, 1.6vmin, 24px);
+  flex-wrap: nowrap; max-width: 100%; min-width: 0;
+  color: var(--accent); white-space: nowrap;
+}
+.page[data-mode="display"] .hero .h-num .n {
+  font-size: var(--fit-num);
+  letter-spacing: -.02em;
+  line-height: .88; min-width: 0; white-space: nowrap;
+}
+.page[data-mode="display"] .hero .h-num .u {
+  font-size: var(--fit-unit);
+  letter-spacing: .04em;
+  color: var(--text-2); white-space: nowrap;
+}
+.page[data-mode="display"] .hero .h-sub {
+  display: flex; justify-content: center; align-items: baseline;
+  gap: clamp(4px, 1.2vmin, 16px);
+  border: 0; padding: 0;
+  /* 与数字字号成比例 —— 字号现在由 JS 反推，用 vh 固定值会脱节 */
+  margin-top: var(--fit-gap, 2.2vh);
+  font-size: var(--fit-sub);
+  color: var(--text); white-space: nowrap;
+}
+.page[data-mode="display"] .hero .h-sub .lbl {
+  font-size: .34em; letter-spacing: 2px; opacity: .85;
+}
+.page[data-mode="display"] .hero .h-sub .u2 { font-size: .45em; margin-left: 2px; opacity: .85; }
+.page[data-mode="display"] .hero .h-sub .sep { opacity: .5; }
+
+/* 展示模式页脚：靠 flex 自然坐在底部，而不是用 margin-top 硬顶 */
+.display-foot { display: none; }
+.page[data-mode="display"] .display-foot {
+  flex: none;
+  display: flex; justify-content: center; align-items: baseline;
+  gap: clamp(14px, 5vw, 80px); flex-wrap: wrap;
+  /* 两侧留白与 Hero 同源，否则底部信息会贴到视口边缘 */
+  padding: 0 clamp(20px, 6vw, 120px) 3vh;
+  font-size: var(--fit-sub-foot, min(2.2vw, 3.6vh, 1.9rem));
+  color: var(--text-2);
+  max-width: 100%;
+  box-sizing: border-box;
+}
+/* 展示模式下日历卡整体隐藏，「日历 ›」按钮点下去不会有任何结果。
+   与其留一个死按钮，不如按状态不渲染它的可点性。 */
+.page[data-mode="display"] .card-band .cb-act { display: none; }
+.page[data-mode="display"] .display-foot b { color: var(--text); font-weight: 800; }
+.page[data-mode="display"] .display-foot .df-i { display: flex; align-items: baseline; gap: 8px; }
+.page[data-mode="display"] .display-foot .df-l {
+  font-size: .62em; color: var(--text-3); letter-spacing: 2px;
+}
+
+/* 展示模式 · 窄视口：底部信息改两行（字号同样由 JS 反推） */
+.browser[data-w="phone"] .page[data-mode="display"] .hero,
+.browser[data-w="tablet"] .page[data-mode="display"] .hero {
+  padding: 3vh clamp(16px, 5vw, 40px);
+}
+.browser[data-w="phone"] .page[data-mode="display"] .display-foot {
+  flex-direction: column; align-items: center; gap: 6px;
+  padding-bottom: 2.5vh;
+}
+/* 横向短高：收紧留白，字号仍由 JS 决定 */
+@media (max-height: 560px) {
+  .page[data-mode="display"] .hero .h-sub { margin-top: 1.2vh; }
+  .page[data-mode="display"] .hero .h-target { margin-bottom: .8vh; }
+  .page[data-mode="display"] .display-foot { padding-bottom: 1.5vh; }
+}
+
+/* 展示模式 · 横屏优先：
+   横屏手机的痛点是「上下堆不下」而横向很宽。所以矮横屏下不再竖着堆叠，
+   改成「标签 │ 大数字 │ 精确行」并排一行，把横向空间用起来。 */
+@media (orientation: landscape) and (max-height: 620px) {
+  .page[data-mode="display"] .hero {
+    flex-direction: row;
+    justify-content: center; align-items: center;
+    flex-wrap: nowrap;
+    gap: clamp(12px, 3vw, 44px);
+    padding: 4vh clamp(20px, 5vw, 90px);
+  }
+  .page[data-mode="display"] .hero .h-target {
+    order: 1; flex: 0 1 auto; max-width: 26%;
+    margin-bottom: 0;
+    font-size: var(--fit-side, 1.1rem);
+    letter-spacing: 2px; line-height: 1.35;
+    white-space: normal;            /* 并排时允许折行，否则会挤压数字 */
+    text-align: right;
+  }
+  .page[data-mode="display"] .hero .h-num { order: 2; flex: 0 0 auto; }
+  .page[data-mode="display"] .hero .h-sub {
+    order: 3; flex: 0 1 auto; max-width: 28%;
+    margin-top: 0;
+    flex-direction: column; align-items: flex-start;
+    gap: 2px;
+    font-size: var(--fit-side, 1.1rem);
+    white-space: normal;
+  }
+  .page[data-mode="display"] .hero .h-sub .lbl { font-size: .8em; opacity: .7; }
+  .page[data-mode="display"] .hero .h-sub .sep { display: none; }
+  .page[data-mode="display"] .display-foot { padding-bottom: 2vh; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page *, .page *::before, .page *::after {
+    animation-duration: .001ms !important; transition-duration: .001ms !important;
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- ===================== 预览工具条 ===================== -->
+<div class="shell-bar">
+  <div class="shell-bar-inner">
+    <div class="shell-brand">设计预览<small>高考倒计时 · 2.1.0 候选</small></div>
+
+    <div class="shell-group" data-group="theme">
+      <span class="gl">主题</span>
+      <button class="shell-btn" data-theme-btn="camp">
+        <span class="sw"><i style="background:#FFF6E9"></i><i style="background:#E8892B"></i><i style="background:#5FB7D4"></i></span>露营
+      </button>
+      <button class="shell-btn" data-theme-btn="night">
+        <span class="sw"><i style="background:#0E1116"></i><i style="background:#161B22"></i><i style="background:#F0B357"></i></span>夜航
+      </button>
+      <button class="shell-btn" data-theme-btn="ink">
+        <span class="sw"><i style="background:#F5F1EA"></i><i style="background:#FFFDFA"></i><i style="background:#B5722E"></i></span>砚台
+      </button>
+      <button class="shell-btn" data-theme-btn="board">
+        <span class="sw"><i style="background:#FFFFFF"></i><i style="background:#F2F3F5"></i><i style="background:#D0322B"></i></span>白板
+      </button>
+      <button class="shell-btn" data-theme-btn="celadon">
+        <span class="sw"><i style="background:#F2F5F4"></i><i style="background:#FFFFFF"></i><i style="background:#0F6E68"></i></span>青瓷
+      </button>
+    </div>
+
+    <div class="shell-group" data-group="width">
+      <span class="gl">视口</span>
+      <button class="shell-btn" data-w="desktop">桌面 1280</button>
+      <button class="shell-btn" data-w="tablet">平板 834</button>
+      <button class="shell-btn" data-w="phone">手机 390</button>
+    </div>
+
+    <div class="shell-group" data-group="size">
+      <span class="gl">字号</span>
+      <button class="shell-btn" data-size="std">标准</button>
+      <button class="shell-btn" data-size="lg">大</button>
+      <button class="shell-btn" data-size="xl">超大</button>
+    </div>
+
+    <div class="shell-group">
+      <button class="shell-btn" id="modeBtn">进入展示模式</button>
+    </div>
+  </div>
+</div>
+
+<div class="stage-wrap">
+  <div class="shell-note">
+    真实基准：北京时间 <b>2026-10-02 21:10</b> · 倒计时按 <code>bjDate</code> 同一套 UTC+8 规则实时跑。
+    切换主题 = 只换 <code>html[data-theme]</code> 上的 token 覆盖，页面 CSS 一行不改。
+  </div>
+
+  <div class="browser" data-w="desktop" id="browser" style="margin-top:16px;">
+    <div class="chrome">
+      <span class="dots"><i></i><i></i><i></i></span>
+      <span class="url">https://www.nightvoyager.online/gaokao/</span>
+    </div>
+
+    <!-- ===================== 页面本体 ===================== -->
+    <div class="page" id="page" data-theme="camp" data-size="std" data-mode="normal" data-layout="split">
+
+      <header class="pg-header">
+        <div class="pg-title">
+          <h1>高考倒计时</h1>
+          <span class="badge-cohort">2027 届</span>
+        </div>
+        <div class="pg-clock">
+          <b id="bjClock">2026-10-02 21:10:00</b><br>
+          <span>北京时间 · 周五</span>
+        </div>
+      </header>
+
+      <!-- 阶段轨道 -->
+      <section class="rail" aria-label="考试阶段">
+        <div class="rail-head">
+          <span class="rt">考试阶段</span>
+          <span class="rh">
+            <span id="railMode">当前：高考</span>
+            <button class="rail-back" type="button" id="railBack" hidden>↩ 回到当前阶段</button>
+          </span>
+        </div>
+        <div class="rail-steps" id="railSteps"></div>
+      </section>
+
+      <main class="pg-main">
+        <!-- 左栏 -->
+        <div class="col-left">
+          <!-- Hero -->
+          <section class="card hero card--solid"
+                   style="--card-solid-bg: var(--camp-sun, var(--bg-card)); --hero-bg: var(--camp-sun, var(--bg-card));">
+            <div class="card-head"><h2 class="card-title">总倒计时</h2></div>
+            <div class="h-target" id="heroTarget">距 2027 年高考还有</div>
+            <div class="h-date" id="heroDate">2027 年 6 月 7 日 09:00 开考 · 6 月 10 日 11:00 结束</div>
+            <div class="h-num">
+              <span class="n" id="heroDays">--</span><span class="u">天</span>
+            </div>
+            <div class="h-sub">
+              <span class="lbl">精确</span>
+              <span><b id="heroH">--</b><span class="u2">时</span></span><span class="sep">:</span>
+              <span><b id="heroM">--</b><span class="u2">分</span></span><span class="sep">:</span>
+              <span><b id="heroS">--</b><span class="u2">秒</span></span>
+            </div>
+            <div class="stat-row">
+              <span class="pill accent"><span class="dt pulse"></span><span id="statState">备考中</span></span>
+              <span class="pill" id="statNext">—</span>
+              <span class="pill" id="statProgress">—</span>
+            </div>
+            <span class="sr-only" aria-live="polite" id="heroA11y"></span>
+          </section>
+
+          <!-- 下个假日（新增：节假日功能在首页的落点） -->
+          <section class="card card--solid" id="holidayCard"
+                   style="--card-solid-bg: var(--camp-sand, var(--bg-card)); --card-accent: var(--camp-sand, var(--bg-soft)); --accent-text: #1F1A12;">
+            <div class="card-band">
+              <span>下一个假期</span>
+              <button class="cb-act" type="button" data-goto="calCard">日历 ›</button>
+            </div>
+            <div class="next-hol">
+              <div class="nh-l">
+                <span class="nh-icon">假</span>
+                <div>
+                  <div class="nh-name" id="nhName">国庆节</div>
+                  <div class="nh-meta" id="nhMeta">10 月 1 日 – 10 月 5 日 · 5 天</div>
+                </div>
+              </div>
+              <div class="nh-r">
+                <div class="nh-days"><span id="nhDays">--</span><small>天</small></div>
+              </div>
+            </div>
+            <div class="nh-strip" id="nhStrip"></div>
+          </section>
+        </div>
+
+        <!-- 右栏 -->
+        <div class="col-right">
+          <!-- 当前场次（仅高考阶段显示：诊断考试没有「9 场」这回事） -->
+          <section class="card card--solid" id="examProgressCard"
+                   style="--card-solid-bg: var(--camp-tree, var(--bg-card)); --card-accent: var(--camp-tree, var(--bg-soft)); --accent-text: #1F1A12;">
+            <div class="card-band">
+              <span>考试进程</span>
+              <span id="bandNext">下一场 · 语文</span>
+            </div>
+            <div class="slot">
+              <div class="slot-row">
+                <span class="pill info"><span class="dt pulse"></span>下一场</span>
+                <span class="slot-name">语文</span>
+                <span class="slot-time">09:00 – 11:30</span>
+                <span class="slot-dur">150 分钟</span>
+              </div>
+              <div class="bar info"><i style="width:0%"></i></div>
+              <div class="bar-meta"><span>距离开考</span><span id="slotCd">--</span></div>
+            </div>
+          </section>
+
+          <!-- 日历 -->
+          <section class="card card--tinted card--notch" id="calCard"
+                   style="--card-tint: var(--bg-card); --card-accent: var(--camp-sky, var(--info)); --accent-text: #1F1A12;">
+            <div class="card-band">
+              <span>日历 · 节假日</span>
+              <span id="calToday">今天 10/02</span>
+            </div>
+            <div class="cal-month-tabs" id="calTabs" role="tablist" aria-label="选择月份"></div>
+            <div class="cal-grid" id="calGrid" role="grid"></div>
+            <div class="cal-legend">
+              <span><i class="h"></i>法定放假</span>
+              <span><i class="w"></i>调休上班</span>
+              <span><i class="t"></i>今天</span>
+            </div>
+            <div class="hol-list" id="holList"></div>
+          </section>
+
+          <!-- 日程 -->
+          <section class="card card--texture" id="scheduleCard"
+                   style="--card-solid-bg: var(--bg-soft); --card-accent: var(--camp-sun, var(--accent)); --accent-text: #1F1A12;">
+            <div class="card-band">
+              <span>考试日程</span>
+              <button class="cb-act" type="button" id="editDatesBtn">改日期</button>
+            </div>
+            <div id="schedule"></div>
+          </section>
+
+          <!-- 选科 -->
+          <section class="card">
+            <div class="card-head"><h2 class="card-title">我的选科</h2></div>
+            <div class="chip-row">
+              <span class="crl">首选</span>
+              <div class="chips" data-group="primary">
+                <button class="chip" aria-pressed="false">历史</button>
+                <button class="chip" aria-pressed="false">物理</button>
+              </div>
+            </div>
+            <div class="chip-row">
+              <span class="crl">再选</span>
+              <div class="chips" data-group="secondary">
+                <button class="chip" aria-pressed="true">化学</button>
+                <button class="chip" aria-pressed="false">地理</button>
+                <button class="chip" aria-pressed="false">思想政治</button>
+                <button class="chip" aria-pressed="false">生物学</button>
+              </div>
+            </div>
+            <div class="chips-hint">已选 1 科 · 日程中未选科目会自动淡化</div>
+          </section>
+        </div>
+      </main>
+
+      <!-- 展示模式页脚 -->
+      <div class="display-foot">
+        <span class="df-i"><span class="df-l">当前</span><b id="dfPhase">备考中</b></span>
+        <span class="df-i"><span class="df-l">下一场</span><b id="dfNext">语文 · 6/7 09:00</b></span>
+      </div>
+
+      <footer class="pg-footer">金榜题名 · 前程似锦</footer>
+      <!-- 读屏播报：按钮跳转后给出反馈，避免键盘用户「点完不知道去哪了」 -->
+      <span class="sr-only" id="a11yLive" role="status" aria-live="polite"></span>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   预览数据与渲染
+   全部按北京时间（UTC+8）构造，与 time.js 的 bjDate 约定一致。
+   ============================================================ */
+(function () {
+  'use strict';
+
+  var CN_OFFSET_MIN = 8 * 60;
+  var MS_DAY = 86400000;
+
+  function bjDate(y, m, d, h, mi, s) {
+    return new Date(Date.UTC(y, m - 1, d, h || 0, mi || 0, s || 0) - CN_OFFSET_MIN * 60000);
+  }
+  function pad2(n) { return String(n).padStart(2, '0'); }
+  function splitDuration(ms) {
+    var v = Math.max(0, ms);
+    return {
+      d: Math.floor(v / MS_DAY),
+      h: Math.floor((v % MS_DAY) / 3600000),
+      m: Math.floor((v % 3600000) / 60000),
+      s: Math.floor((v % 60000) / 1000)
+    };
+  }
+  /** 北京时间下的日序号，用于整日比较 */
+  function cnDayNumber(date) {
+    var t = new Date(date.getTime() + CN_OFFSET_MIN * 60000);
+    return Math.floor(Date.UTC(t.getUTCFullYear(), t.getUTCMonth(), t.getUTCDate()) / MS_DAY);
+  }
+
+  /* 「还有几天」的统一算法。
+     之前 Hero 数字走 splitDuration 的 floor（80 天 02 时），
+     阶段轨道却用 Math.ceil（81 天），同一件事两套算法 → 同屏对不上。
+     分裂的两个数字比一个不精确的数字更糟，所以统一走这里。 */
+  function daysUntil(now, target) {
+    return Math.max(0, Math.ceil((target - now) / MS_DAY));
+  }
+  var GAOKAO_YEAR = 2027;
+  var NOMINAL_YEAR = 2027;   // 名义考年：节假日表按此年维护
+
+  // ---- 9 场考试（与 time.js exams 一致） ----
+  var examDefs = [
+    { date: 7,  start: [9, 0],   end: [11, 30], name: '语文',            tag: '全国统考' },
+    { date: 7,  start: [15, 0],  end: [17, 0],  name: '数学',            tag: '全国统考' },
+    { date: 8,  start: [9, 0],   end: [10, 15], name: '历史 / 物理',     tag: '等级选考' },
+    { date: 8,  start: [15, 0],  end: [17, 0],  name: '外语',            tag: '全国统考' },
+    { date: 9,  start: [8, 30],  end: [9, 45],  name: '化学',            tag: '等级选考' },
+    { date: 9,  start: [11, 0],  end: [12, 15], name: '地理',            tag: '等级选考' },
+    { date: 9,  start: [14, 30], end: [15, 45], name: '思想政治',        tag: '等级选考' },
+    { date: 9,  start: [17, 0],  end: [18, 15], name: '生物学',          tag: '等级选考' },
+    { date: 10, start: [9, 0],   end: [11, 0],  name: '藏语文 / 彝语文', tag: '民族加试' }
+  ];
+  var WK = ['日', '一', '二', '三', '四', '五', '六'];
+
+  function examStartAt(ex) { return bjDate(GAOKAO_YEAR, 6, ex.date, ex.start[0], ex.start[1]); }
+  function examEndAt(ex)   { return bjDate(GAOKAO_YEAR, 6, ex.date, ex.end[0], ex.end[1]); }
+
+  var exams = examDefs.map(function (ex) {
+    return {
+      def: ex, name: ex.name, tag: ex.tag,
+      day: ex.date,
+      start: examStartAt(ex), end: examEndAt(ex),
+      sh: pad2(ex.start[0]), sm: pad2(ex.start[1]),
+      eh: pad2(ex.end[0]),   em: pad2(ex.end[1]),
+      duration: (ex.end[0] * 60 + ex.end[1]) - (ex.start[0] * 60 + ex.start[1]),
+      parts: ex.name === '历史 / 物理' ? ['历史', '物理'] : [ex.name]
+    };
+  });
+
+  // ---- 阶段（与 time.js PHASE_CONFIG 默认值一致） ----
+  var phases = [
+    { id: 'zero',   name: '零诊', start: bjDate(2026, 7, 6),   end: bjDate(2026, 7, 8) },
+    { id: 'first',  name: '一诊', start: bjDate(2026, 12, 22), end: bjDate(2026, 12, 24) },
+    { id: 'second', name: '二诊', start: bjDate(2027, 3, 23),  end: bjDate(2027, 3, 25) },
+    { id: 'third',  name: '三诊', start: bjDate(2027, 4, 27),  end: bjDate(2027, 4, 29) },
+    { id: 'final',  name: '高考', start: bjDate(2027, 6, 7),   end: bjDate(2027, 6, 10, 11, 0) }
+  ];
+
+  // ---- 节假日数据（演示用；生产形态见对话中的风险评估） ----
+  var HOLIDAYS = [
+    { year: 2026, month: 10, day: 1,  name: '国庆节',   kind: 'holiday' },
+    { year: 2026, month: 10, day: 2,  name: '国庆节',   kind: 'holiday' },
+    { year: 2026, month: 10, day: 3,  name: '国庆节',   kind: 'holiday' },
+    { year: 2026, month: 10, day: 4,  name: '国庆节',   kind: 'holiday' },
+    { year: 2026, month: 10, day: 5,  name: '国庆节',   kind: 'holiday' },
+    { year: 2026, month: 10, day: 6,  name: '中秋节',   kind: 'holiday' },
+    { year: 2026, month: 10, day: 10, name: '调休上班', kind: 'workday' },
+    { year: 2026, month: 10, day: 11, name: '调休上班', kind: 'workday' },
+    { year: 2027, month: 1,  day: 1,  name: '元旦',     kind: 'holiday' },
+    { year: 2027, month: 1,  day: 2,  name: '元旦',     kind: 'holiday' },
+    { year: 2027, month: 1,  day: 3,  name: '元旦',     kind: 'holiday' },
+    { year: 2027, month: 6,  day: 9,  name: '端午节',   kind: 'tentative' }
+  ];
+
+  // ---- 视口可变：用被替换后的「现在」做基准 ----
+  var BASE_NOW = bjDate(2026, 10, 2, 21, 10, 0);
+  var weekdays = { 0: '周日', 1: '周一', 2: '周二', 3: '周三', 4: '周四', 5: '周五', 6: '周六' };
+  function cnWeekday(d) {
+    var t = new Date(d.getTime() + CN_OFFSET_MIN * 60000);
+    return weekdays[t.getUTCDay()];
+  }
+
+  // ============================================================
+  //  渲染
+  // ============================================================
+  var $ = function (id) { return document.getElementById(id); };
+
+  // ---- 阶段轨道 ----
+  var activePhaseId = 'final';   // 页面当前聚焦的阶段
+  var heroPicked = null;         // 用户手动点选的阶段（null = 跟随当前阶段）
+
+  function phaseNameById(id) {
+    var out = '';
+    phases.forEach(function (p) { if (p.id === id) out = p.name; });
+    return out;
+  }
+
+  function renderRail(now) {
+    var host = $('railSteps');
+    host.innerHTML = '';
+    var v = resolveView(now);
+
+    /* 语义修正：所谓「当前阶段」应该是「下一个尚未开始的阶段」。
+       零诊已结束、一诊未开始 —— 那么考生当前要面对的考试就是一诊，
+       以前这里显示「当前：高考」，与用户直觉冲突。 */
+    var current = v.upcoming;
+
+    var rail = document.querySelector('.rail');
+    var isPastView = !!heroPicked && v.selState === 'past';
+    if (rail) rail.classList.toggle('is-focused', isPastView);
+    /* 「查看中」只能用于「已结束」的阶段 —— 二诊/三诊/高考都在未来，
+       用「查看中」是过去时，读起来像是看历史记录。
+       未来阶段被点选时，直接以阶段名作为计数目标即可。 */
+    var modeEl = $('railMode');
+    if (modeEl) {
+      if (!current) {
+        modeEl.textContent = '所有阶段已结束';
+      } else if (heroPicked && v.selState === 'past') {
+        modeEl.textContent = '查看中：' + v.sel.name + '（已结束）';
+      } else {
+        modeEl.textContent = '当前：' + current.name;
+      }
+    }
+    // 「回到当前阶段」只在真的看着已结束阶段时出现（此时才有可回退的状态）
+    var backBtn = $('railBack');
+    if (backBtn) backBtn.hidden = !(heroPicked && v.selState === 'past');
+
+    phases.forEach(function (p) {
+      var done = now > p.end;
+      var nowOn = now >= p.start && now <= p.end;
+      var isCurrent = !!current && p.id === current.id;
+      var b = document.createElement('button');
+      b.type = 'button';
+      /* 四态互斥，且「已结束」优先 ——
+         之前零诊同时吃到 done 和 now 两个类，既显示「已结束」又被画成强调色，
+         看起来像正在进行，自相矛盾。 */
+      b.className = 'step'
+        + (done ? ' done' : nowOn ? ' live' : isCurrent ? ' now' : ' todo')
+        + (heroPicked === p.id ? ' picked' : '');
+      b.dataset.phase = p.id;
+      if (isCurrent) b.setAttribute('aria-current', 'step');
+      var sub;
+      if (done) sub = '已结束';
+      else if (nowOn) sub = '进行中';
+      else sub = '还有 ' + daysUntil(now, p.start) + ' 天';
+      b.innerHTML = '<span class="dot"></span><span class="nm">' + p.name + '</span>' +
+                    '<span class="sub">' + sub + '</span>';
+      b.addEventListener('click', function () {
+        heroPicked = p.id;
+        renderRail(nowBJ());
+        renderHero(nowBJ());
+      });
+      host.appendChild(b);
+    });
+  }
+
+  // 「回到当前阶段」：清掉手动选择，Hero 与轨道都回到跟随当前状态
+  (function bindRailBack() {
+    var btn = $('railBack');
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+      heroPicked = null;
+      renderRail(nowBJ());
+      renderHero(nowBJ());
+    });
+  })();
+
+  // ---- Hero ----
+  var lastViewSig = null;   // 「目标 + 正在查看的阶段」签名，用于判断这一屏是否变了
+
+  /* 唯一的阶段判定。之前 Hero 用 phase、状态标签用「下一个阶段」、
+     轨道再用一套，三处各算各的，必然互相矛盾。
+     现在所有显示都从这一个函数取值。 */
+  function resolveView(now) {
+    // 用户点选的阶段；未点选时取「当前正在进行的阶段」，都没有则取高考
+    var sel = null;
+    if (heroPicked) {
+      phases.forEach(function (p) { if (p.id === heroPicked) sel = p; });
+    } else {
+      phases.forEach(function (p) { if (now >= p.start && now <= p.end) sel = p; });
+    }
+    if (!sel) sel = phases[4];
+
+    var upcoming = null;
+    for (var i = 0; i < phases.length; i++) {
+      if (phases[i].start > now) { upcoming = phases[i]; break; }
+    }
+    var selState = now < sel.start ? 'upcoming'
+      : now <= sel.end ? 'ongoing' : 'past';
+
+    // 目标：已过去的阶段没有「倒计时」可言，落到下一个尚未开始的阶段
+    var target = selState === 'past' ? upcoming : sel;
+    return { sel: sel, selState: selState, upcoming: upcoming, target: target };
+  }
+
+  function renderHero(now) {
+    var v = resolveView(now);
+    var target = v.target;
+
+    if (!target) {
+      // 所有阶段都已过去：显示归零，不再编造「后续阶段」
+      setHeroNum({ d: 0, h: 0, m: 0, s: 0 });
+      $('heroTarget').textContent = '所有考试已结束 · 金榜题名';
+      $('heroDate').textContent = '——';
+      renderStatRow(now, v);
+      return;
+    }
+
+    var waiting = now < target.start;
+    var inPhase = !waiting && now <= target.end;
+    var delta = (waiting ? target.start : target.end) - now;
+    var rest = splitDuration(delta);
+
+    /* 「天数」用 ceil 取整，与下方小标签共用同一个 daysUntil ——
+       此前大数字走 floor（80 天 02 时）、小标签走 ceil（81 天），
+       同屏出现两个不一致的天数，这是无法自圆其说的。
+       精确的时分秒仍走 splitDuration，放在下方一行。 */
+    var dayVal = String(daysUntil(now, waiting ? target.start : target.end));
+
+    var dEl = $('heroDays');
+    dEl.textContent = dayVal;
+    $('heroH').textContent = pad2(rest.h);
+    $('heroM').textContent = pad2(rest.m);
+    $('heroS').textContent = pad2(rest.s);
+
+    /* 闪烁的判定依据是「这一屏显示的内容是否变了」，而不是「倒计时目标是否变了」。
+       反例：零诊与一诊都已结束，两者都解析到同一个目标（一诊），
+       此时数字不该变，但用户确实切换了「正在查看哪个阶段」，
+       页面必须有反馈 —— 否则点了两个节点却毫无动静。
+       因此把「目标 + 正在查看的阶段」一起纳入签名。 */
+    var viewSig = target.id + '|' + v.sel.id + '|' + v.selState;
+    if (lastViewSig !== null && viewSig !== lastViewSig) {
+      dEl.classList.remove('flash');
+      void dEl.offsetWidth;               // 强制重排，让动画能连续重放
+      dEl.classList.add('flash');
+      setTimeout(function () { dEl.classList.remove('flash'); }, 280);
+    }
+    lastViewSig = viewSig;
+
+    /* 这里刻意不再单独渲染「查看：X（已结束）」标记。
+       它与下面那行文案说的是同一件事，同屏出现两遍就是噪音；
+       切换反馈已经由上面的闪烁承担。 */
+
+    /* 文案：无论走到哪个分支，都明确说出「数字指的是谁」。
+       已结束阶段被查看时，用括号补充说明，而不是另起一句重复一遍 ——
+       此前是「查看 零诊（已结束）· 距 一诊 还有」再加一行
+       「倒计时目标：一诊 · 12 月 22 日」，同一个词在一张卡里出现三次。 */
+    var label;
+    if (v.selState === 'past') {
+      label = '距 ' + target.name + ' 还有（' + v.sel.name + ' 已结束）';
+    } else if (waiting) {
+      label = '距 ' + target.name + ' 还有';
+    } else {
+      label = target.name + ' 进行中 · 距结束还有';
+    }
+    $('heroTarget').textContent = label;
+
+    var s1 = new Date(target.start.getTime() + CN_OFFSET_MIN * 60000);
+    var s2 = new Date(target.end.getTime() + CN_OFFSET_MIN * 60000);
+    // 日期一律属于「倒计时目标」，与上面的文案同指一个阶段，不需要再加归属前缀
+    $('heroDate').textContent =
+      s1.getUTCFullYear() + ' 年 ' + (s1.getUTCMonth() + 1) + ' 月 ' + s1.getUTCDate() + ' 日' +
+      (target.id === 'final' ? ' 09:00 开考' : '') + ' – ' +
+      (s2.getUTCFullYear() === s1.getUTCFullYear() ? '' : s2.getUTCFullYear() + ' 年 ') +
+      (s2.getUTCMonth() + 1) + ' 月 ' + s2.getUTCDate() + ' 日' +
+      (target.id === 'final' ? ' 11:00 结束' : '');
+
+    $('heroA11y').textContent = label + ' ' + dayVal + ' 天 ' + rest.h + ' 小时 ' + rest.m + ' 分';
+    renderStatRow(now, v);
+    renderDisplayFoot(now, v, target);
+
+    function setHeroNum(q) {
+      $('heroDays').textContent = String(q.d);
+      $('heroH').textContent = pad2(q.h);
+      $('heroM').textContent = pad2(q.m);
+      $('heroS').textContent = pad2(q.s);
+      lastViewSig = null;                 // 归零态：下次进入正常视图时重新提示
+    }
+  }
+
+  /* 状态标签：从同一个 resolveView 取值。
+     之前这里显示的是「选中阶段的下一个阶段」，与 Hero 数字不同源，
+     于是出现「大字 80 天 / 小字 距一诊 81 天」这类自相矛盾。 */
+  function renderStatRow(now, v) {
+    var st = $('statState');
+    if (st) {
+      st.textContent = v.sel.name + (
+        v.selState === 'upcoming' ? ' 备考中'
+          : v.selState === 'ongoing' ? ' 进行中' : ' 已结束');
+    }
+
+    var nx = $('statNext');
+    if (nx) {
+      if (v.upcoming) {
+        nx.textContent = '距 ' + v.upcoming.name + ' ' + daysUntil(now, v.upcoming.start) + ' 天';
+      } else {
+        nx.textContent = '所有阶段已结束';
+      }
+    }
+
+    /* 「已完成 N / 9 场」只属于高考阶段 —— 诊断考试没有 9 场这回事，
+       在诊断阶段显示它会直接误导用户。 */
+    var pr = $('statProgress');
+    var finalPhase = phases[4];
+    var isFinalView = v.sel.id === 'final';
+    if (pr) {
+      if (isFinalView) {
+        var doneCount = 0;
+        for (var i = 0; i < exams.length; i++) { if (now > exams[i].end) doneCount++; }
+        pr.textContent = '已完成 ' + doneCount + ' / ' + exams.length + ' 场';
+        pr.style.display = '';
+      } else {
+        pr.style.display = 'none';
+      }
+    }
+    var card = $('examProgressCard');
+    if (card) card.style.display = isFinalView ? '' : 'none';
+  }
+
+  function renderDisplayFoot(now, v, target) {
+    var dfPhase = $('dfPhase');
+    if (dfPhase) {
+      dfPhase.textContent = v.sel.name + (
+        v.selState === 'upcoming' ? ' 备考中'
+          : v.selState === 'ongoing' ? ' 进行中' : ' 已结束');
+    }
+    var dfNext = $('dfNext');
+    if (dfNext) {
+      var nx = null;
+      for (var i = 0; i < exams.length; i++) {
+        if (now < exams[i].start) { nx = exams[i]; break; }
+      }
+      dfNext.textContent = nx
+        ? nx.name + ' · 6/' + nx.day + ' ' + nx.sh + ':' + nx.sm
+        : '全部完成';
+    }
+  }
+
+  // ---- 下个假期 ----
+  function holidayRunFrom(now) {
+    // 把同一节日的连续 holiday 合并成一段
+    var runs = [], cur = null;
+    HOLIDAYS.filter(function (h) { return h.kind === 'holiday'; })
+      .sort(function (a, b) {
+        return bjDate(a.year, a.month, a.day) - bjDate(b.year, b.month, b.day);
+      })
+      .forEach(function (h) {
+        var dt = bjDate(h.year, h.month, h.day);
+        if (cur && h.name === cur.name &&
+            cnDayNumber(dt) - cnDayNumber(cur.end) === 1) {
+          cur.end = dt; cur.days++;
+        } else {
+          cur = { name: h.name, start: dt, end: dt, days: 1 };
+          runs.push(cur);
+        }
+      });
+    return runs;
+  }
+  function renderNextHoliday(now) {
+    var runs = holidayRunFrom(now);
+    var next = null, active = null;
+    for (var i = 0; i < runs.length; i++) {
+      if (now >= runs[i].start && now <= runs[i].end) { active = runs[i]; }
+      if (runs[i].start > now && !next) { next = runs[i]; }
+    }
+    var show = active || next;
+    if (!show) return;
+
+    var inHoliday = !!active;
+    var show = active || next;
+    $('nhName').textContent = show.name + (inHoliday ? ' · 假期中' : '');
+    var t = new Date(show.start.getTime() + CN_OFFSET_MIN * 60000);
+    var t2 = new Date(show.end.getTime() + CN_OFFSET_MIN * 60000);
+    $('nhMeta').textContent =
+      (t.getUTCMonth() + 1) + ' 月 ' + t.getUTCDate() + ' 日 – ' +
+      (t2.getUTCMonth() + 1) + ' 月 ' + t2.getUTCDate() + ' 日 · 共 ' + show.days + ' 天';
+
+    // 展示：假期内 → 剩余天数；否则 → 距离开始的天数
+    var daysLeft = inHoliday
+      ? Math.ceil((show.end - now) / MS_DAY)
+      : Math.ceil((show.start - now) / MS_DAY);
+    $('nhDays').textContent = Math.max(0, daysLeft);
+    $('nhDays').nextElementSibling.textContent = inHoliday ? '天后结束' : '天';
+
+    // 进度段：等待时按「已过去 / 剩余」比例点亮，假期中按「已过天数」点亮
+    var strip = $('nhStrip');
+    strip.innerHTML = '';
+    var total = show.days;
+    var elapsed;
+    if (inHoliday) {
+      elapsed = total - Math.max(0, daysLeft);
+    } else {
+      elapsed = Math.min(total, Math.max(0, Math.round(total * (1 - daysLeft / (daysLeft + 1)))));
+    }
+    for (var k = 0; k < total; k++) {
+      var seg = document.createElement('i');
+      if (k < elapsed) seg.className = 'on';
+      strip.appendChild(seg);
+    }
+  }
+
+  // ---- 当前场次 ----
+  function renderSlot(now) {
+    var next = null;
+    for (var i = 0; i < exams.length; i++) {
+      if (now < exams[i].start) { next = exams[i]; break; }
+    }
+    var el = $('slotCd');
+    var band = $('bandNext');
+    if (!next) {
+      if (el) el.textContent = '全部完成';
+      if (band) band.textContent = '已全部完成';
+      return;
+    }
+    var p = splitDuration(next.start - now);
+    if (el) el.textContent = (p.d > 0 ? p.d + ' 天 ' : '') + pad2(p.h) + ':' + pad2(p.m) + ':' + pad2(p.s);
+    if (band) band.textContent = '下一场 · ' + next.name + ' ' + next.sh + ':' + next.sm;
+  }
+
+  // ---- 日程 ----
+  function renderSchedule(now, selected) {
+    var host = $('schedule');
+    host.innerHTML = '';
+    var groups = {};
+    exams.forEach(function (ex) {
+      if (!groups[ex.day]) groups[ex.day] = [];
+      groups[ex.day].push(ex);
+    });
+    Object.keys(groups).sort(function (a, b) { return a - b; }).forEach(function (day) {
+      var g = document.createElement('div');
+      g.className = 'day-group';
+      var d0 = bjDate(GAOKAO_YEAR, 6, Number(day));
+      var h = document.createElement('div');
+      h.className = 'day-head';
+      h.innerHTML = '<span class="dn">6/' + day + '</span>' +
+                    '<span class="dd">6 月 ' + day + ' 日 · ' + cnWeekday(d0) + '</span>';
+      g.appendChild(h);
+
+      var lastSess = '';
+      groups[day].forEach(function (ex) {
+        var am = ex.def.start[0] < 12;
+        var sess = am ? '上午场' : '下午场';
+        if (sess !== lastSess) {
+          lastSess = sess;
+          var sd = document.createElement('div');
+          sd.className = 'sess';
+          sd.innerHTML = '<span class="ln"></span><span class="lb">' + sess + '</span><span class="ln"></span>';
+          g.appendChild(sd);
+        }
+        var isRelevant = ex.parts.some(function (p) { return selected.indexOf(p) >= 0; });
+        var dim = ex.tag === '等级选考' && selected.length > 0 && !isRelevant;
+        var isNow = now >= ex.start && now <= ex.end;
+        var done = now > ex.end;
+
+        var card = document.createElement('div');
+        card.className = 'exam' + (isRelevant && selected.length ? ' selected' : '') +
+                         (dim ? ' dimmed' : '') + (done ? ' done' : '') + (isNow ? ' now' : '');
+
+        var cdHtml;
+        if (done) {
+          cdHtml = '<span class="big">✓</span><span class="un">已完成</span>';
+        } else if (isNow) {
+          var p = splitDuration(ex.end - now);
+          cdHtml = '<span class="big">' + pad2(p.h) + ':' + pad2(p.m) + '</span>' +
+                   '<span class="un">剩余</span><span class="rest">考试中</span>';
+        } else {
+          var pd = splitDuration(ex.start - now);
+          cdHtml = '<span class="big">' + pd.d + '</span><span class="un">天</span>' +
+                   '<span class="rest">' + pad2(pd.h) + ':' + pad2(pd.m) + ':' + pad2(pd.s) + '</span>';
+        }
+        var dur = ex.duration >= 60
+          ? Math.floor(ex.duration / 60) + ' 时' + (ex.duration % 60 ? ex.duration % 60 + ' 分' : '')
+          : ex.duration + ' 分钟';
+
+        card.innerHTML =
+          '<div><div class="ex-name">' + ex.name + '</div>' +
+          '<div class="ex-meta"><span class="tm">' + ex.sh + ':' + ex.sm + ' – ' + ex.eh + ':' + ex.em + '</span>' +
+          '<span class="tag">' + ex.tag + '</span><span>' + dur + '</span></div></div>' +
+          '<div class="ex-cd">' + cdHtml + '</div>';
+        g.appendChild(card);
+      });
+      host.appendChild(g);
+    });
+  }
+
+  // ---- 日历 ----
+  var calState = { year: 2026, month: 10 };
+  function holidayOf(y, m, d) {
+    for (var i = 0; i < HOLIDAYS.length; i++) {
+      var h = HOLIDAYS[i];
+      if (h.year === y && h.month === m && h.day === d) return h;
+    }
+    return null;
+  }
+  function renderCalendar(now) {
+    var y = calState.year, m = calState.month;
+    var tabs = $('calTabs');
+    tabs.innerHTML = '';
+    [[2026, 10], [2026, 12], [2027, 1], [2027, 6]].forEach(function (ym) {
+      var cnt = HOLIDAYS.filter(function (h) {
+        return h.year === ym[0] && h.month === ym[1] && h.kind === 'holiday';
+      }).length;
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'mtab';
+      b.setAttribute('role', 'tab');
+      b.setAttribute('aria-selected', String(ym[0] === y && ym[1] === m));
+      b.innerHTML = ym[0] + '/' + ym[1] + (cnt ? '<span class="cnt">' + cnt + ' 天</span>' : '');
+      b.addEventListener('click', function () {
+        calState.year = ym[0]; calState.month = ym[1]; renderCalendar(now);
+      });
+      tabs.appendChild(b);
+    });
+
+    var grid = $('calGrid');
+    grid.innerHTML = '';
+    ['一', '二', '三', '四', '五', '六', '日'].forEach(function (w, i) {
+      var s = document.createElement('div');
+      s.className = 'cal-wd' + (i >= 5 ? ' we' : '');
+      s.textContent = w;
+      grid.appendChild(s);
+    });
+
+    var first = bjDate(y, m, 1);
+    var t0 = new Date(first.getTime() + CN_OFFSET_MIN * 60000);
+    var startOffset = t0.getUTCDay() - 1;
+    if (startOffset < 0) startOffset = 6;
+    var daysInMonth = new Date(Date.UTC(y, m, 0)).getUTCDate();
+    var prevMonthDays = new Date(Date.UTC(y, m - 1, 0)).getUTCDate();
+
+    var todayKey = cnDayNumber(now);
+    var cells = [];
+    for (var i = startOffset - 1; i >= 0; i--) cells.push({ d: prevMonthDays - i, out: true });
+    for (var d = 1; d <= daysInMonth; d++) cells.push({ d: d, out: false });
+    while (cells.length % 7 !== 0 || cells.length < 35) cells.push({ d: cells.length - startOffset - daysInMonth + 1, out: true });
+
+    cells.forEach(function (c) {
+      var cell = document.createElement('div');
+      cell.className = 'cal-day';
+      var dowIdx = (t0.getUTCDay() + (c.out ? 0 : c.d - 1)) % 7;
+      if (dowIdx === 0 || dowIdx === 6) cell.classList.add('we');
+      if (c.out) cell.classList.add('out');
+
+      var h = c.out ? null : holidayOf(y, m, c.d);
+      if (h) {
+        if (h.kind === 'holiday') { cell.classList.add('holiday'); cell.title = h.name + '（放假）'; }
+        else if (h.kind === 'workday') { cell.classList.add('workday'); cell.title = h.name; }
+        else { cell.classList.add('tentative'); cell.title = h.name + '（日期以国务院公布为准）'; }
+      }
+      var key = cnDayNumber(bjDate(y, m, c.d));
+      if (!c.out && key === todayKey) cell.classList.add('today');
+
+      var lb = '';
+      if (h) {
+        if (h.kind === 'workday') lb = '班';
+        else if (h.kind === 'tentative') lb = h.name;
+        else if (h.day === 1 || !holidayOf(y, m, c.d - 1)) lb = h.name;
+      }
+      cell.innerHTML = '<span class="cd-n">' + c.d + '</span>' +
+        (h && h.kind === 'tentative' ? '<span class="cd-tent">待定</span>' : '') +
+        (lb ? '<span class="cd-lb">' + lb + '</span>' : '');
+      cell.setAttribute('role', 'gridcell');
+      cell.setAttribute('aria-label',
+        y + '年' + m + '月' + c.d + '日' + (h ? '，' + h.name : ''));
+      grid.appendChild(cell);
+    });
+
+    // 当月节假日清单
+    var list = $('holList');
+    list.innerHTML = '';
+    var items = HOLIDAYS.filter(function (h) { return h.year === y && h.month === m; });
+    if (!items.length) {
+      var empty = document.createElement('div');
+      empty.className = 'hol-item';
+      empty.innerHTML = '<span class="hi-name" style="color:var(--text-3)">本月无法定假日</span>';
+      list.appendChild(empty);
+    }
+    items.forEach(function (h) {
+      var row = document.createElement('div');
+      row.className = 'hol-item' + (h.kind === 'tentative' ? ' is-tent' : '');
+      var dt = bjDate(h.year, h.month, h.day);
+      var diff = cnDayNumber(dt) - todayKey;
+      var when = diff === 0 ? '今天' : diff > 0 ? diff + ' 天后' : '已过';
+      row.innerHTML =
+        '<span class="hi-date">' + pad2(h.month) + '/' + pad2(h.day) + '</span>' +
+        '<span class="hi-name">' + h.name + '</span>' +
+        (h.kind === 'tentative' ? '<span class="hi-tag">待定</span>' : '') +
+        (h.kind === 'workday' ? '<span class="hi-tag">调休</span>' : '') +
+        '<span class="hi-cnt">' + when + '</span>';
+      list.appendChild(row);
+    });
+  }
+
+  // ============================================================
+  //  展示模式字号：实测容器后反推
+  //  ------------------------------------------------------------
+  //  为什么不能用 CSS：vw/vh 是估算，容器查询只能约束单个文本节点、
+  //  管不了「整列内容必须装进视口高度」。唯一可靠的办法是量出可用空间，
+  //  再按内容的自然尺寸反推字号。这里用 canvas 度量，避免反复写 DOM 触发重排。
+  // ============================================================
+  var measureCanvas = null;
+  var measureCtx = null;
+  var measureReady = null;
+  function textWidth(text, font) {
+    if (measureReady === null) {
+      try {
+        measureCanvas = document.createElement('canvas');
+        measureCtx = measureCanvas.getContext('2d');
+        measureReady = !!(measureCtx && typeof measureCtx.measureText === 'function');
+      } catch (_) { measureReady = false; }
+    }
+    if (!measureReady) return 0;      // 度量不可用时让调用方走兜底值
+    try { measureCtx.font = font; return measureCtx.measureText(text).width; }
+    catch (_) { return 0; }
+  }
+  function fontStack(el) {
+    var cs = getComputedStyle(el);
+    return cs.fontFamily;
+  }
+
+  function fitDisplay() {
+    if (page.dataset.mode !== 'display') return;
+    var hero = document.querySelector('.hero');
+    if (!hero) return;
+
+    // 可用空间 = Hero 的内容盒（page 已设 overflow:hidden，不会产生滚动）
+    var cs = getComputedStyle(hero);
+    var availW = hero.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    var availH = hero.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+    if (availW <= 0 || availH <= 0) return;
+
+    var nEl = $('heroDays');
+    var uEl = hero.querySelector('.h-num .u');
+    var tEl = $('heroTarget');
+    var sEl = hero.querySelector('.h-sub');
+    var fEl = document.querySelector('.display-foot');
+    // 按「可能出现的最大位数」定字号，避免数字从 3 位变 2 位时字号跳变
+    var digits = Math.max(2, (nEl.textContent || '000').length);
+    var sample = new Array(digits + 1).join('0');
+
+    /* 横屏并排布局：竖向不再是瓶颈（标签与精确行在两侧），
+       所以数字可以按高度放开，宽度预算相应减少（要给两侧文字留位）。 */
+    var isLandscape = window.matchMedia('(orientation: landscape) and (max-height: 620px)').matches;
+
+    var family = fontStack(nEl);
+    var unitRatio = 0.30;
+    var w1 = textWidth(sample, '800 100px ' + family) / 100;
+    var wUnit1 = textWidth(uEl ? uEl.textContent : '天', '700 100px ' + family) / 100;
+    var unitTerm = unitRatio * wUnit1;
+    var gapPx = 8;
+    var numSize;
+
+    if (isLandscape) {
+      var sideBudget = availW * 0.54;              // 两侧文字预留约 46%
+      var maxByW2 = w1 > 0 ? (sideBudget - gapPx) / (w1 + unitTerm) : sideBudget * 0.42;
+      if (!isFinite(maxByW2) || maxByW2 <= 0) maxByW2 = sideBudget * 0.42;
+      numSize = Math.max(20, Math.min(availH * 0.78, maxByW2));
+    } else {
+      // 竖向预算：数字 + 标签 + 精确行 + 页脚 + 间隙
+      var footH = fEl ? fEl.offsetHeight : 0;
+      var gapH = availH * 0.10;
+      var subBudget = Math.max(0, availH - footH - gapH);
+      var maxByH = subBudget * 0.62;
+      var maxByW = w1 > 0 ? (availW - gapPx) / (w1 + unitTerm) : availW * 0.42;
+      if (!isFinite(maxByW) || maxByW <= 0) maxByW = availW * 0.42;
+      numSize = Math.max(24, Math.min(maxByH, maxByW));
+    }
+    numSize = Math.min(numSize, 22 * 16);           // 绝对上限 352px
+
+    // --- 其余元素按数字字号成比例，并受各自宽度约束 ---
+    var unitSize = numSize * unitRatio;
+    var subSize = isLandscape
+      ? Math.max(11, Math.min(numSize * 0.24, availH * 0.20))
+      : Math.min(numSize * 0.22, 3.2 * 16);
+    // 精确行必须能装下
+    if (sEl) {
+      var sw = textWidth(sEl.textContent.trim() || '精确 00 时 00 分 00 秒',
+                         '400 100px ' + fontStack(sEl)) / 100;
+      if (sw > 0 && !isLandscape) subSize = Math.min(subSize, (availW - 24) / sw);
+    }
+    // 标签必须能装下
+    var targetSize = Math.min(numSize * 0.14, 2.2 * 16);
+    if (tEl) {
+      var tw = textWidth(tEl.textContent, '600 100px ' + fontStack(tEl)) / 100;
+      if (tw > 0) {
+        var tBudget = isLandscape ? availW * 0.24 : availW - 16;
+        targetSize = Math.min(targetSize, tBudget / tw);
+      }
+    }
+    if (isLandscape) targetSize = Math.max(12, Math.min(targetSize, availH * 0.18));
+
+    page.style.setProperty('--fit-num', numSize.toFixed(2) + 'px');
+    page.style.setProperty('--fit-unit', unitSize.toFixed(2) + 'px');
+    page.style.setProperty('--fit-sub', subSize.toFixed(2) + 'px');
+    page.style.setProperty('--fit-side', (isLandscape ? targetSize : subSize).toFixed(2) + 'px');
+    page.style.setProperty('--fit-gap', Math.max(6, Math.min(40, numSize * 0.10)).toFixed(1) + 'px');
+    if (tEl) tEl.style.fontSize = targetSize.toFixed(2) + 'px';
+  }
+
+  // 尺寸变化时重新适配（视口、主题、字号档、展示开关都走这里）
+  var fitQueued = false;
+  function queueFit() {
+    if (fitQueued) return;
+    fitQueued = true;
+    requestAnimationFrame(function () { fitQueued = false; fitDisplay(); });
+  }
+
+  /* 退出展示模式时必须清掉内联字号。
+     否则那些 px 值会一直挂在元素上，与普通模式的字号打架 ——
+     表现就是「从全屏退出来后字莫名变大」。 */
+  function resetDisplayFit() {
+    page.style.removeProperty('--fit-num');
+    page.style.removeProperty('--fit-unit');
+    page.style.removeProperty('--fit-sub');
+    page.style.removeProperty('--fit-side');
+    page.style.removeProperty('--fit-gap');
+    var tEl = $('heroTarget');
+    if (tEl) tEl.style.removeProperty('font-size');
+  }
+  if (typeof ResizeObserver === 'function') {
+    new ResizeObserver(queueFit).observe(document.querySelector('.hero'));
+  }
+  window.addEventListener('resize', queueFit);
+
+  // ============================================================
+  //  主循环
+  // ============================================================
+  var selected = ['化学'];
+  var startedAt = Date.now();
+  var BASE_TS = BASE_NOW.getTime();
+
+  function nowBJ() { return new Date(BASE_TS + (Date.now() - startedAt)); }
+
+  function renderAll(force) {
+    var now = nowBJ();
+    var t = new Date(now.getTime() + CN_OFFSET_MIN * 60000);
+    $('bjClock').textContent =
+      t.getUTCFullYear() + '-' + pad2(t.getUTCMonth() + 1) + '-' + pad2(t.getUTCDate()) + ' ' +
+      pad2(t.getUTCHours()) + ':' + pad2(t.getUTCMinutes()) + ':' + pad2(t.getUTCSeconds());
+    renderHero(now);
+    renderSlot(now);
+    if (force) {
+      renderRail(now);
+      renderNextHoliday(now);
+      renderSchedule(now, selected);
+      renderCalendar(now);
+      $('calToday').textContent = '今天 ' + pad2(t.getUTCMonth() + 1) + '/' + pad2(t.getUTCDate());
+    }
+  }
+
+  renderAll(true);
+  setInterval(function () { renderAll(false); }, 1000);
+  // 首帧后再做一次展示模式适配（此时布局已完成，量出来的尺寸才准）
+  queueFit();
+
+  /* 选科交互
+     旧写法「先改 DOM、超限再 return」极易留下状态不一致：
+     一旦中途返回，chip 的 aria-pressed 与实际选中集就可能分叉。
+     现在改为「改数组 → 由数组统一回写 DOM」，上限判定只作用于数组，
+     DOM 永远不会成为真相来源。上限：首选 1 科、再选 2 科。 */
+  var SUBJECT_GROUPS = {
+    primary:   { max: 1, options: ['历史', '物理'] },
+    secondary: { max: 2, options: ['化学', '地理', '思想政治', '生物学'] }
+  };
+
+  function groupOfSubject(name) {
+    for (var g in SUBJECT_GROUPS) {
+      if (SUBJECT_GROUPS[g].options.indexOf(name) >= 0) return g;
+    }
+    return null;
+  }
+
+  function syncChips() {
+    document.querySelectorAll('.chip').forEach(function (c) {
+      c.setAttribute('aria-pressed', selected.indexOf(c.textContent.trim()) >= 0 ? 'true' : 'false');
+    });
+    var hint = document.querySelector('.chips-hint');
+    if (hint) hint.textContent = '已选 ' + selected.length + ' 科 · 日程中未选科目会自动淡化';
+  }
+
+  document.querySelectorAll('.chips').forEach(function (group) {
+    group.addEventListener('click', function (e) {
+      var chip = e.target.closest('.chip');
+      if (!chip) return;
+      var name = chip.textContent.trim();
+      var g = groupOfSubject(name);
+      if (!g) return;
+      var max = SUBJECT_GROUPS[g].max;
+
+      var idx = selected.indexOf(name);
+      if (idx >= 0) {
+        selected.splice(idx, 1);                       // 取消该科
+      } else {
+        /* 同组腾位判定：必须看「加入这一科之后」是否超出上限，
+           即 sameGroup.length + 1 > max，等价于 sameGroup.length >= max。
+           之前写的是 sameGroup.length >= max 却放在「追加之前」判断，
+           于是再选只剩 1 科时判定不成立、直接追加成 3 科，
+           下一次才轮到替换 —— 永远晚一步，上限等于没有。 */
+        var sameGroup = selected.filter(function (s) { return groupOfSubject(s) === g; });
+        if (sameGroup.length + 1 > max) {
+          if (max === 1) {
+            // 互斥单选：清空该组
+            selected = selected.filter(function (s) { return groupOfSubject(s) !== g; });
+          } else {
+            // 上限 2：腾掉同组中最早进入的那一科
+            var oldest = sameGroup[0];
+            selected.splice(selected.indexOf(oldest), 1);
+          }
+        }
+        selected.push(name);
+      }
+      // 仅用于自动化验收：把内部状态与分组判定暴露出来，便于精确定位交互缺陷
+      // （不影响任何界面行为；生产版本可以整段删除）
+      window.__probe = {
+        selected: function () { return selected.slice(); },
+        groupOf: groupOfSubject,
+        groups: SUBJECT_GROUPS
+      };
+      syncChips();
+      renderSchedule(nowBJ(), selected);
+    });
+  });
+
+  /* 初始化：数组必须以「DOM 里已经按下的 chip」为准。
+     否则会出现 html 写了 aria-pressed="true"、而 selected 为空的分叉，
+     第一次点击就会把已选科目当成未选、凭空多出一科（再选上限随之失效）。
+     顺序很关键：先建数组，再回写 DOM。 */
+  selected = Array.from(document.querySelectorAll('.chip[aria-pressed="true"]'))
+    .map(function (c) { return c.textContent.trim(); });
+  syncChips();
+
+  // 仅用于自动化验收：暴露内部状态，便于精确定位交互缺陷（生产版本可整段删除）
+  window.__probe = {
+    selected: function () { return selected.slice(); },
+    groupOf: groupOfSubject,
+    groups: SUBJECT_GROUPS
+  };
+
+  // ============================================================
+  //  按钮行为
+  //  上一版这几个按钮是死的 —— 放了按钮没接事件，等于骗人。
+  //  这里让「日历 ›」跳到日历卡、「改日期」切到日程卡并高亮，
+  //  交互形态与生产版一致（生产版会打开设置弹窗与日历弹层）。
+  // ============================================================
+  function goToCard(id, label) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.classList.add('flash-card');
+    setTimeout(function () { el.classList.remove('flash-card'); }, 900);
+    // 可访问性：把焦点也带过去，键盘用户不会「点完不知道去哪了」
+    el.setAttribute('tabindex', '-1');
+    el.focus({ preventScroll: true });
+    var live = document.getElementById('a11yLive');
+    if (live) live.textContent = label;
+  }
+
+  document.querySelectorAll('[data-goto]').forEach(function (b) {    b.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var target = b.dataset.goto;
+      goToCard(target, target === 'calCard' ? '已跳到日历' : '已跳到目标');
+    });
+  });
+
+  var editBtn = $('editDatesBtn');
+  if (editBtn) {
+    editBtn.addEventListener('click', function () {
+      // demo 里不实现完整设置弹窗，但必须给出可见反馈
+      var c = $('scheduleCard');
+      c.classList.add('is-editing');
+      goToCard('scheduleCard', '日程改为可编辑（演示）');
+      setTimeout(function () { c.classList.remove('is-editing'); }, 1600);
+    });
+  }
+
+  // ============================================================
+  //  预览工具条
+  // ============================================================
+  var page = $('page'), browser = $('browser');
+
+  document.querySelectorAll('[data-theme-btn]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      page.dataset.theme = b.dataset.themeBtn;
+      syncTheme();
+      queueFit();
+    });
+  });
+  document.querySelectorAll('[data-w]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      browser.dataset.w = b.dataset.w;
+      syncTheme();
+      queueFit();
+    });
+  });
+  document.querySelectorAll('[data-size]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      page.dataset.size = b.dataset.size;
+      syncTheme();
+      queueFit();
+    });
+  });
+
+  $('modeBtn').addEventListener('click', function () {
+    var on = page.dataset.mode === 'display';
+    page.dataset.mode = on ? 'normal' : 'display';
+    this.textContent = on ? '进入展示模式' : '退出展示模式';
+    this.classList.toggle('on', !on);
+    if (on) resetDisplayFit();          // 退出展示模式：先清内联字号，再走一次适配
+    else if (browser.dataset.w === 'phone') browser.dataset.w = 'desktop';
+    syncTheme();
+    queueFit();
+  });
+
+  // 键盘：1-5 切主题，D/T/P 切视口，Esc 退出展示模式
+  document.addEventListener('keydown', function (e) {
+    if (e.target.matches('input, textarea')) return;
+    var themes = ['camp', 'night', 'ink', 'board', 'celadon'];
+    if (e.key >= '1' && e.key <= '5') {
+      page.dataset.theme = themes[+e.key - 1]; syncTheme(); queueFit();
+    }
+    if (e.key === 'd' || e.key === 'D') { browser.dataset.w = 'desktop'; syncTheme(); queueFit(); }
+    if (e.key === 't' || e.key === 'T') { browser.dataset.w = 'tablet'; syncTheme(); queueFit(); }
+    if (e.key === 'p' || e.key === 'P') { browser.dataset.w = 'phone'; syncTheme(); queueFit(); }
+    if (e.key === 'Escape' && page.dataset.mode === 'display') { $('modeBtn').click(); }
+  });
+
+  function syncTheme() {
+    var t = page.dataset.theme;
+    document.querySelectorAll('[data-theme-btn]').forEach(function (b) {
+      b.setAttribute('aria-pressed', String(b.dataset.themeBtn === t));
+    });
+    document.querySelectorAll('[data-w]').forEach(function (b) {
+      b.setAttribute('aria-pressed', String(b.dataset.w === browser.dataset.w));
+    });
+    document.querySelectorAll('[data-size]').forEach(function (b) {
+      b.setAttribute('aria-pressed', String(b.dataset.size === page.dataset.size));
+    });
+    // 把状态同步进 URL，便于截图/分享特定组合
+    try {
+      history.replaceState(null, '', '#' +
+        ['t=' + t, 'w=' + browser.dataset.w, 's=' + page.dataset.size,
+         'm=' + page.dataset.mode,
+         'hide=' + (document.body.classList.contains('hide-bar') ? 1 : 0)].join('&'));
+    } catch (_) {}
+  }
+
+  // 从 URL 还原状态：#t=camp&w=phone&s=xl&m=display&hide=1
+  (function restoreFromHash() {
+    var q = {};
+    (location.hash || '').replace(/^#/, '').split('&').forEach(function (kv) {
+      var i = kv.indexOf('=');
+      if (i > 0) q[kv.slice(0, i)] = kv.slice(i + 1);
+    });
+    var themes = ['camp', 'night', 'ink', 'board', 'celadon'];
+    if (q.t && themes.indexOf(q.t) >= 0) page.dataset.theme = q.t;
+    if (q.w && ['desktop', 'tablet', 'phone'].indexOf(q.w) >= 0) browser.dataset.w = q.w;
+    if (q.s && ['std', 'lg', 'xl'].indexOf(q.s) >= 0) page.dataset.size = q.s;
+    if (q.m === 'display') {
+      page.dataset.mode = 'display';
+      $('modeBtn').textContent = '退出展示模式';
+      $('modeBtn').classList.add('on');
+    }
+    if (q.hide === '1') document.body.classList.add('hide-bar');
+  })();
+
+  syncTheme();
+  // 从 hash 还原后布局才定型，这里再适配一次展示模式字号
+  queueFit();
+})();
+</script>
+</body>
+</html>

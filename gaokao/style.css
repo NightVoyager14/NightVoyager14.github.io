@@ -1448,13 +1448,15 @@
             position: fixed;
             inset: 0;
             z-index: 20000;
-            background: rgba(0,0,0,0.4);
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
+            /* 与 demo 的遮罩一致：只用一层浅黑压暗，不做背景模糊。
+               模糊会让底下的卡片纹理变成一片糊，反而失去「这是同一页」的连续感。 */
+            background: rgba(0,0,0,0.25);
             justify-content: center;
             align-items: center;
             padding: 20px;
         }
+        /* 深色主题下浅黑不够压暗，单独加深一档 */
+        html[data-theme="night"] .modal-overlay { background: rgba(0,0,0,0.55); }
         .modal-overlay.open { display: flex; animation: fadeUp 0.2s ease; }
 
         .settings-modal {
@@ -1782,3 +1784,2236 @@
                 transition-duration: 0.25s !important;
             }
         }
+
+/* ============================================================
+   v2.1.0 · 主题系统
+   ------------------------------------------------------------
+   加载顺序即优先级：本段在文件末尾，因此以下 :root 声明会覆盖
+   上方 v2.0.x 的同名变量（--bg / --text-primary / --border 等），
+   从而把新的视觉语言接入既有组件。
+
+   命名约定：
+     新 token 用短名（--bg / --text / --text-2 / --accent …）
+     旧 token 名继续保留并「重定向」到新值，保证既有组件立刻生效，
+     无需一次性改完 1784 行样式。
+     维度彼此独立：data-theme 管配色，data-size 管字号档。
+   ============================================================ */
+
+:root {
+    /* ---- 新视觉语言的结构性 token ---- */
+    --r-sharp: 2px;
+    --r-btn: 5px;
+    --r-card: 12px;
+    --r-pill: 999px;
+    --bd: 1.5px;
+    --tr-type: .28s cubic-bezier(.4, 0, .2, 1);
+
+    --bg-inset: #FFFDFA;
+    --text: #2B2620;
+    --text-2: #6B6055;
+    --text-3: #8C8073;
+    --accent: #B5722E;
+    --accent-weak: rgba(181,114,46,.12);
+    --accent-text: #FFFFFF;
+    --info: #2E6B8F;
+    --info-weak: rgba(46,107,143,.12);
+    --ok: #2F7A45;
+    --ok-weak: rgba(47,122,69,.12);
+    --border-strong: #CDBFA9;
+
+    /* Hero / 彩块卡：默认「跟卡片一样」，只有露营主题把它改成整块实色 */
+    --hero-bg: var(--bg-card);
+    --hero-fg: var(--text-2);
+    --hero-num: var(--accent);
+    --card-tint: var(--bg-card);
+    --card-accent: var(--border-strong);
+    --card-solid-bg: var(--bg-card);
+    --card-solid-fg: var(--text);
+    --card-solid-line: var(--border);
+    --info-block: var(--bg-soft);
+    --info-block-fg: var(--text);
+
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+                 "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+    --font-serif: "Songti SC", "Noto Serif SC", "Source Han Serif SC", STSong,
+                  SimSun, Georgia, serif;
+    --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+                 "Liberation Mono", monospace;
+    --font-display: var(--font-sans);
+    --font-heading: var(--font-sans);
+
+    /* 正文字体跟随主题的衬线/无衬线选择 */
+    --font-body: var(--font-sans);
+
+    /* ---- 旧 token 名重定向到新值（兼容既有组件） ---- */
+    --bg: #F5F1EA;
+    --bg-soft: #EFE8DE;
+    --bg-card: #FFFDFA;
+    --bg-card-hover: #FBF6EE;
+    --bg-hero: #FFFDFA;
+    --bg-selector: #FFFDFA;
+    --bg-selector-option: #FBF6EE;
+    --bg-overlay: #F5F1EA;
+    --bg-fs-next: #FFFDFA;
+    --bg-tag-mandatory: #EFE8DE;
+    --bg-tag-elective: #E7ECE4;
+    --bg-tag-special: #EFE8DE;
+
+    --text-primary: var(--text);
+    --text-secondary: var(--text-2);
+    --text-muted: var(--text-3);
+    --text-light: #B9AB99;
+    --text-accent: var(--accent);
+    --text-hero: var(--accent);
+    --text-on-accent: var(--accent-text);
+    --text-elective: var(--ok);
+    --text-special: #A0653F;
+    --text-tag-mandatory: var(--accent);
+    --text-tag-elective: var(--ok);
+    --text-tag-special: #A0653F;
+    --text-tag-dimmed: #C9BEB0;
+
+    --border: #E3D9CB;
+    --border-card: #E3D9CB;
+    --border-card-hover: #CDBFA9;
+    --border-card-selected: #D9C6AC;
+    --border-selector: #E3D9CB;
+    --border-selector-option: #E3D9CB;
+    --border-selector-active: var(--accent);
+
+    --shadow-sm: 0 1px 3px rgba(80,60,30,.06);
+    --shadow-md: 0 1px 6px rgba(80,60,30,.07);
+    --shadow-lg: 0 8px 26px rgba(80,60,30,.10);
+    --shadow-btn: 0 4px 16px rgba(181,114,46,.24);
+    --shadow-btn-hover: 0 6px 20px rgba(181,114,46,.32);
+
+    --radius-sm: var(--r-sharp);
+    --radius-md: var(--r-btn);
+    --radius-lg: var(--r-card);
+    --radius-full: var(--r-pill);
+    --transition: .2s ease;
+}
+
+/* ---------- 主题 1：砚台（暖纸 · 人文衬线）—— 默认 ---------- */
+html[data-theme="ink"] {
+    --bg: #F5F1EA; --bg-soft: #EFE8DE; --bg-card: #FFFDFA; --bg-card-hover: #FBF6EE;
+    --bg-inset: #FFFFFF;
+    --text: #2B2620; --text-2: #6B6055; --text-3: #8C8073;
+    --accent: #B5722E; --accent-weak: rgba(181,114,46,.12); --accent-text: #FFFFFF;
+    --info: #2E6B8F; --info-weak: rgba(46,107,143,.12);
+    --ok: #2F7A45; --ok-weak: rgba(47,122,69,.12);
+    --border: #E3D9CB; --border-strong: #CDBFA9;
+    --shadow: 0 1px 6px rgba(80,60,30,.07);
+    --shadow-lift: 0 8px 26px rgba(80,60,30,.10);
+    --font-display: var(--font-serif);
+    --font-heading: var(--font-serif);
+    --hero-bg: var(--bg-card); --hero-fg: var(--text-2); --hero-num: var(--accent);
+    --card-tint: var(--bg-card); --card-accent: var(--border-strong);
+    --info-block: var(--bg-soft); --info-block-fg: var(--text);
+}
+
+/* ---------- 主题 2：夜航（深色主导 · 暖金） ---------- */
+html[data-theme="night"] {
+    --bg: #0E1116; --bg-soft: #141922; --bg-card: #161B22; --bg-card-hover: #1C232D;
+    --bg-inset: #0B0E13;
+    --text: #E6EDF3; --text-2: #A7B4C2; --text-3: #7C8896;
+    --accent: #F0B357; --accent-weak: rgba(240,179,87,.14); --accent-text: #0E1116;
+    --info: #5B9DF9; --info-weak: rgba(91,157,249,.16);
+    --ok: #56D364; --ok-weak: rgba(86,211,100,.14);
+    --border: #262D38; --border-strong: #333C49;
+    --shadow: 0 2px 14px rgba(0,0,0,.45);
+    --shadow-lift: 0 10px 30px rgba(0,0,0,.5);
+    --font-display: var(--font-sans);
+    --font-heading: var(--font-sans);
+    --hero-bg: var(--bg-card); --hero-fg: var(--text-2); --hero-num: var(--accent);
+    --card-tint: var(--bg-card); --card-accent: var(--border-strong);
+    --info-block: var(--bg-soft); --info-block-fg: var(--text);
+}
+
+/* ---------- 主题 3：白板（极简高对比） ---------- */
+html[data-theme="board"] {
+    --bg: #FFFFFF; --bg-soft: #F2F3F5; --bg-card: #FFFFFF; --bg-card-hover: #F7F8F9;
+    --bg-inset: #FFFFFF;
+    --text: #101214; --text-2: #4B5359; --text-3: #6E767D;
+    --accent: #D0322B; --accent-weak: rgba(208,50,43,.10); --accent-text: #FFFFFF;
+    --info: #1B6EF3; --info-weak: rgba(27,110,243,.10);
+    --ok: #0F7B3E; --ok-weak: rgba(15,123,62,.10);
+    --border: #DDE0E3; --border-strong: #B9BFC5;
+    --shadow: 0 1px 3px rgba(0,0,0,.05);
+    --shadow-lift: 0 6px 18px rgba(0,0,0,.08);
+    --font-display: var(--font-sans);
+    --font-heading: var(--font-sans);
+    --hero-bg: var(--bg-card); --hero-fg: var(--text-2); --hero-num: var(--accent);
+    --card-tint: var(--bg-card); --card-accent: var(--border-strong);
+    --info-block: var(--bg-soft); --info-block-fg: var(--text);
+}
+
+/* ---------- 主题 4：青瓷（冷调靛青） ---------- */
+html[data-theme="celadon"] {
+    --bg: #F2F5F4; --bg-soft: #E7ECEA; --bg-card: #FFFFFF; --bg-card-hover: #F6F9F8;
+    --bg-inset: #FFFFFF;
+    --text: #1B2A28; --text-2: #556866; --text-3: #7A8C8A;
+    --accent: #0F6E68; --accent-weak: rgba(15,110,104,.12); --accent-text: #FFFFFF;
+    --info: #3557A8; --info-weak: rgba(53,87,168,.12);
+    --ok: #2C7A4B; --ok-weak: rgba(44,122,75,.12);
+    --border: #D8E0DE; --border-strong: #B4C1BE;
+    --shadow: 0 1px 6px rgba(20,50,48,.06);
+    --shadow-lift: 0 8px 24px rgba(20,50,48,.09);
+    --font-display: var(--font-sans);
+    --font-heading: var(--font-sans);
+    --hero-bg: var(--bg-card); --hero-fg: var(--text-2); --hero-num: var(--accent);
+    --card-tint: var(--bg-card); --card-accent: var(--border-strong);
+    --info-block: var(--bg-soft); --info-block-fg: var(--text);
+}
+
+/* ---------- 主题 5：露营（日落橙 + 天蓝 · 同页多色块） ----------
+   前景色按 WCAG 对比度选过：
+     #1F1A12 on #E8892B ≈ 6.5:1      #1F1A12 on #F7CE6B ≈ 10.9:1
+     #1F1A12 on #8FD3E8 ≈ 10.5:1     #1F1A12 on #A7D9A0 ≈  9.8:1
+     #FFFFFF on #E8892B ≈ 2.6:1（仅用于展示级超大数字）           */
+html[data-theme="camp"] {
+    --bg: #FFF6E9; --bg-soft: #FCE9CE; --bg-card: #FFFFFF; --bg-card-hover: #FFFBF4;
+    --bg-inset: #FFF9F0;
+    --text: #3F342A; --text-2: #7A6754; --text-3: #9C8A76;
+    --accent: #E8892B; --accent-weak: rgba(232,137,43,.14); --accent-text: #FFFFFF;
+    --info: #5FB7D4; --info-weak: rgba(95,183,212,.16);
+    --ok: #5E9E58; --ok-weak: rgba(94,158,88,.14);
+    --border: #F0DFC4; --border-strong: #E0BE8E;
+    --shadow: 0 2px 0 rgba(180,130,70,.10);
+    --shadow-lift: 0 6px 0 rgba(180,130,70,.13);
+    --font-display: var(--font-sans);
+    --font-heading: var(--font-sans);
+    --hero-bg: #E8892B; --hero-fg: #1F1A12; --hero-num: #FFFFFF;
+    --card-tint: #FFFBF3; --card-accent: #E8892B;
+    --info-block: #8FD3E8; --info-block-fg: #0A3A4A;
+    --camp-sun: #E8892B;   /* 日橙 */
+    --camp-sky: #8FD3E8;   /* 天蓝 */
+    --camp-tree: #A7D9A0;  /* 草绿 */
+    --camp-sand: #F7CE6B;  /* 沙黄 */
+    --card-solid-fg: #1F1A12;
+    --card-solid-line: rgba(0,0,0,.14);
+}
+
+/* ---------- 字号档（独立维度，与主题正交） ---------- */
+html[data-size="std"] { --fs-name: 1.05rem; --n: 22; --u: 4.2; --n-fallback: 19vw; }
+html[data-size="lg"]  { --fs-name: 1.2rem;  --n: 24; --u: 4.6; --n-fallback: 22vw; }
+html[data-size="xl"]  { --fs-name: 1.4rem;  --n: 26; --u: 5.0; --n-fallback: 24vw; }
+
+/* ---------- 露营主题的纹理与形状分化 ---------- */
+html[data-theme="camp"] .rail,
+html[data-theme="camp"] .phase-nav {
+    /* 地图网格纹理：纯 CSS，零资源 */
+    background-image:
+        repeating-linear-gradient(0deg, rgba(232,137,43,.10) 0 1px, transparent 1px 22px),
+        repeating-linear-gradient(90deg, rgba(232,137,43,.10) 0 1px, transparent 1px 22px);
+}
+/* 缺角 + 可见折边：形状语言第 4 张牌。
+   注意 clip-path 在圆角与阴影之后应用，外投影会被裁，
+   所以本类只用在不依赖外投影的卡片上。 */
+.card--notch {
+    position: relative;
+    clip-path: polygon(
+        0 0, 100% 0,
+        100% calc(100% - var(--notch, 30px)),
+        calc(100% - var(--notch, 30px)) 100%,
+        0 100%);
+}
+.card--notch::after {
+    content: '';
+    position: absolute;
+    right: 0; bottom: 0;
+    width: calc(var(--notch, 30px) * 1.42);
+    height: calc(var(--notch, 30px) * 1.42);
+    background: var(--border-strong);
+    clip-path: polygon(100% 0, 100% 100%, 0 100%);
+    pointer-events: none;
+}
+
+/* ============================================================
+   主题菜单
+   ============================================================ */
+.theme-menu {
+    position: fixed;
+    z-index: 200;
+    width: min(320px, calc(100vw - 32px));
+    background: var(--bg-card);
+    border: var(--bd) solid var(--border);
+    border-radius: var(--r-card);
+    box-shadow: var(--shadow-lift);
+    padding: 14px;
+    display: none;
+    max-height: min(70vh, 520px);
+    overflow-y: auto;
+}
+.theme-menu.open { display: block; }
+.tm-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 10px;
+}
+.tm-title {
+    font-size: .72rem; font-weight: 800; letter-spacing: 2.4px; color: var(--text-3);
+}
+.tm-close {
+    appearance: none; border: 0; background: transparent; cursor: pointer;
+    color: var(--text-3); font: inherit; font-size: 1rem; line-height: 1;
+    padding: 2px 6px; border-radius: var(--r-sharp);
+}
+.tm-close:hover { color: var(--text); background: var(--bg-soft); }
+.tm-group { margin-bottom: 14px; }
+.tm-group:last-child { margin-bottom: 0; }
+.tm-label {
+    display: block; font-size: .66rem; font-weight: 700; letter-spacing: 1.6px;
+    color: var(--text-3); margin-bottom: 7px;
+}
+.tm-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.tm-grid.cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.tm-swatch {
+    appearance: none; cursor: pointer; font: inherit; text-align: left;
+    display: flex; align-items: center; gap: 7px;
+    padding: 7px 9px; font-size: .76rem; font-weight: 700;
+    color: var(--text-2); background: var(--bg-inset);
+    border: var(--bd) solid var(--border); border-radius: var(--r-btn);
+    transition: var(--tr);
+}
+.tm-swatch:hover { border-color: var(--border-strong); color: var(--text); }
+.tm-swatch[aria-pressed="true"] {
+    border-color: var(--accent); color: var(--accent);
+    background: var(--accent-weak);
+}
+.tm-swatch .dots { display: inline-flex; border-radius: 2px; overflow: hidden; flex: none; }
+.tm-swatch .dots i { width: 7px; height: 14px; display: block; }
+.tm-hint {
+    font-size: .66rem; color: var(--text-3); margin-top: 8px; line-height: 1.5;
+}
+.tm-swatch:focus-visible, .tm-close:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 2px;
+}
+/* 主题切换时的过渡：字体变化需要缓动，否则会「跳一下」 */
+body, .card, .hero-countdown, .current-exam, .exam-card, .phase-tab, .rail {
+    transition: background-color var(--tr-type), color var(--tr-type),
+                border-color var(--tr-type), font-size var(--tr-type);
+}
+
+/* ============================================================
+   v2.1.0 · 组件视觉语言
+   ------------------------------------------------------------
+   统一到「实色描边 + 硬阴影 + 刻意的圆角分级」：
+     --r-sharp 标签/图章   --r-btn 按钮/卡片项   --r-card 卡片   --r-pill 仅状态徽章
+   这一段同时服务「既有 DOM」与「gaokao.js render() 生成的新 DOM」，
+   因此选择器覆盖两套类名，迁移期间不会出现半新半旧的破相。
+   ============================================================ */
+
+/* ---------- 卡片容器 ---------- */
+.hero-countdown,
+.current-exam,
+.phase-detail,
+.rail,
+.phase-nav,
+.subject-selector {
+    border: var(--bd) solid var(--border);
+    border-radius: var(--r-card);
+    background: var(--bg-card);
+    box-shadow: var(--shadow);
+}
+.hero-countdown { background: var(--hero-bg); border-color: transparent; }
+
+/* 卡内页眉色条：由 gaokao.js prepend 生成，作为整卡的「色块起点」 */
+.card-band {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px;
+    margin: -18px -22px 14px;
+    padding: 9px 22px;
+    background: var(--card-accent, var(--border-strong));
+    color: var(--accent-text);
+    border-radius: var(--r-card) var(--r-card) 0 0;
+    font-size: .72rem; font-weight: 800; letter-spacing: 2.4px;
+}
+.current-exam { padding: 18px 22px; }
+/* 两段文字之间必须有可见分隔，否则会读成「当前考试下一场 …」 */
+.card-band > span:first-child { flex: none; }
+.card-band .cb-note {
+    font-size: .68rem; font-weight: 700; letter-spacing: .6px;
+    opacity: .95; padding-left: 10px;
+    border-left: 1.5px solid currentColor;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* ---------- Hero 大数字 ---------- */
+.hero-countdown .label {
+    color: var(--hero-fg);
+    font-size: .78rem; font-weight: 600; letter-spacing: 2px;
+}
+.hero-countdown .h-date { color: var(--hero-fg); opacity: .85; }
+.hero-countdown .timer .num {
+    color: var(--hero-num);
+    font-family: var(--font-display);
+    font-weight: 800;
+    letter-spacing: -2px;
+    background: transparent;      /* 去掉旧的浅色方块，让数字直接坐在底色上 */
+    padding: 0; min-width: 0;
+    font-variant-numeric: tabular-nums;
+}
+.hero-countdown .timer .unit { color: var(--hero-fg); opacity: .85; }
+.hero-countdown .timer .sep { color: var(--hero-num); opacity: .45; }
+/* Hero 内部的 pill：实色底上需要跟着前景色走 */
+.hero-countdown .pill,
+.hero-countdown .stat-row .pill {
+    background: rgba(255,255,255,.55);
+    color: var(--hero-fg);
+    border: var(--bd) solid rgba(0,0,0,.16);
+    border-radius: var(--r-sharp);
+}
+html[data-theme="night"] .hero-countdown .stat-row .pill {
+    background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.16);
+}
+
+/* ---------- 阶段导航：更接近「路径节点」而非 tab ---------- */
+.phase-nav {
+    background-image: none;
+    padding: 5px;
+}
+.phase-tab {
+    border-radius: var(--r-btn);
+    font-weight: 700;
+    letter-spacing: .5px;
+}
+.phase-tab.active { box-shadow: var(--shadow-btn); }
+
+/* ---------- 日期组 / 上下午分隔 ---------- */
+.day-header .day-num {
+    background: var(--accent);
+    color: var(--accent-text);
+    border-radius: var(--r-sharp);
+    font-family: var(--font-mono);
+    font-weight: 800;
+    padding: 2px 7px;
+}
+.day-header .day-date { color: var(--text-3); font-size: .76rem; letter-spacing: .5px; }
+.session-divider .label { color: var(--text-3); letter-spacing: 2px; font-weight: 700; }
+.session-divider .line { background: var(--border); }
+
+/* ---------- 考试卡 ----------
+   由「一行塞满」改为「两行网格」：
+   第一行科目名 + 时间/类型/时长，第二行右侧突出主倒计时数字。
+   左边缘 3px 实色竖条承担状态标记，不再用整块淡色底。
+   同时兼容旧 DOM（.name/.meta/.countdown-mini 直接子元素）与新 DOM（.exam-main 包裹）。 */
+.exam-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 6px 14px;
+    padding: 12px 16px;
+    background: var(--bg-card);
+    border: var(--bd) solid var(--border);
+    border-left: 3px solid var(--border);
+    border-radius: var(--r-btn);
+    margin-bottom: 6px;
+    box-shadow: none;
+}
+.exam-card .exam-main { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.exam-card .exam-main .name { display: block; }
+.exam-card .name { font-size: var(--fs-name, 1.05rem); font-weight: 700; color: var(--text); letter-spacing: .3px; }
+.exam-card .meta {
+    display: flex; align-items: center; gap: 9px; flex-wrap: wrap;
+    font-size: .72rem; color: var(--text-3); margin: 0; flex: none;
+}
+.exam-card .meta .time-range { font-family: var(--font-mono); color: var(--text-2); font-weight: 600; }
+.exam-card .meta .dur-note { color: var(--text-3); }
+.exam-card .meta .tag { border-radius: var(--r-sharp); font-weight: 700; }
+
+/* 主倒计时：数字大、单位小、其余压到次级 */
+.exam-card .countdown-mini {
+    display: flex; align-items: baseline; gap: 5px;
+    margin-left: 0; flex: none; white-space: nowrap;
+}
+.exam-card .countdown-mini .cd-num {
+    font-family: var(--font-mono);
+    font-size: 1.35rem; font-weight: 800; color: var(--text);
+    min-width: 0; text-align: right;
+}
+.exam-card .countdown-mini .cd-unit { font-size: .66rem; color: var(--text-3); }
+.exam-card .countdown-mini .cd-sep { color: var(--text-3); opacity: .5; }
+
+/* 状态：左边缘竖条 + 降噪，不用整块淡色底 */
+.exam-card:hover { background: var(--bg-card-hover); border-color: var(--border-strong); }
+.exam-card.exam-done { opacity: .45; }
+.exam-card.exam-now {
+    border-left-color: var(--accent);
+    background: var(--accent-weak);
+}
+.exam-card.exam-now .name { color: var(--accent); }
+.exam-card.exam-now .countdown-mini .cd-num { color: var(--accent); }
+.exam-card.subject-selected { border-left-color: var(--accent); }
+.exam-card.subject-selected .name { color: var(--accent); }
+.exam-card.subject-dimmed { opacity: .4; }
+.card--notch { position: relative; }
+
+/* ---------- 状态徽章：保留胶囊，其余一律直角 ---------- */
+.ce-status-badge, .pd-status-badge, .exam-badge, .exam-done-badge, .sel-badge {
+    border-radius: var(--r-pill);
+}
+.exam-card.exam-now .exam-badge {
+    background: var(--accent); color: var(--accent-text);
+    border-radius: var(--r-pill); font-weight: 700;
+}
+.exam-card.exam-now .exam-badge::before { background: currentColor; }
+
+/* ---------- 操作栏与按钮：接近直角 ---------- */
+.action-btn { border-radius: var(--r-btn); font-weight: 700; letter-spacing: .5px; }
+.action-btn-secondary {
+    background: var(--bg-card);
+    color: var(--text-2);
+    border: var(--bd) solid var(--border-strong);
+    box-shadow: none;
+}
+.action-btn-secondary:hover {
+    background: var(--bg-card-hover);
+    color: var(--accent);
+    border-color: var(--accent);
+    box-shadow: none;
+}
+
+/* ---------- 选科：方块按钮，非胶囊 ---------- */
+.ss-option {
+    border: var(--bd) solid var(--border-strong);
+    border-radius: var(--r-btn);
+    background: var(--bg-card);
+    color: var(--text-2);
+    font-weight: 700;
+}
+.ss-option.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-text);
+}
+.ss-row .ss-label { color: var(--text-3); letter-spacing: 1px; font-weight: 700; }
+.ss-header .ss-title { color: var(--text-3); letter-spacing: 2.4px; font-weight: 800; }
+.ss-header .ss-hint { color: var(--text-3); }
+
+/* ---------- 分区标题：强调色竖条，而不是纯灰字 ---------- */
+.section-title {
+    color: var(--text-3);
+    font-weight: 800;
+    letter-spacing: 2.4px;
+    text-align: left;
+}
+.section-title::before {
+    content: ''; display: inline-block; width: 4px; height: 12px;
+    background: var(--accent); border-radius: var(--r-sharp);
+    margin-right: 8px; vertical-align: -1px;
+}
+.cd-legend { color: var(--text-3); }
+
+/* ---------- 页脚 ---------- */
+.footer { border-top: var(--bd) solid var(--border); color: var(--accent); }
+.footer .footer-version { color: var(--text-3); }
+
+/* ---------- 日历弹层：与主题一致 ---------- */
+.cal-popup { border-radius: var(--r-card); border: var(--bd) solid var(--border); }
+.cal-day { border-radius: var(--r-sharp); }
+.cal-day.today { border: 2px solid var(--text); }
+.cal-day.selected { background: var(--accent); color: var(--accent-text); border-radius: 8px; }
+.cal-nav { border-radius: var(--r-btn); }
+.dp-trigger { border-radius: var(--r-btn); border: var(--bd) solid var(--border-strong); }
+.sm-btn { border-radius: var(--r-btn); font-weight: 700; }
+.settings-modal { border-radius: var(--r-card); border: var(--bd) solid var(--border); }
+
+/* ============================================================
+   桌面端 Hero 高光（批次 3.1，批次 3.2 后已并入左栏吸附）
+   ------------------------------------------------------------
+   吸附本身改由「左栏」承担（见下方双栏布局段）：左栏内还有阶段导航，
+   二者需要一起保持可见；若 Hero 单独 sticky，嵌套在同样 sticky 的
+   父级里会表现错乱（两套 sticky 互相争夺定位）。
+   这里只保留那道底边高光，作为滚动时的层次提示。
+   ============================================================ */
+@media (min-width: 900px) {
+    .hero-countdown {
+        position: relative;         /* 为 ::after 提供定位上下文 */
+        overflow: visible;
+    }
+    /* 底边一道极淡的高光，滚动时与下方卡片拉开层次 */
+    .hero-countdown::after {
+        content: '';
+        position: absolute;
+        left: 12px; right: 12px; bottom: -1px; height: 3px;
+        background: linear-gradient(90deg, transparent, var(--hero-num), transparent);
+        opacity: .22; border-radius: var(--r-sharp);
+        pointer-events: none;
+    }
+}
+
+/* ============================================================
+   v2.3.0 · 页头：全宽两栏（左标题 + 右北京时间）
+   对齐 demo 的 .pg-header。基线对齐而不是居中 ——
+   居中会让「四川高考倒计时」在窄屏被压成两行后与徽章错位。
+   ============================================================ */
+.header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: center;
+    gap: 8px 14px;
+    text-align: center;
+    margin-bottom: 18px;
+}
+.header h1 { letter-spacing: 2px; }
+.header .sub { margin-top: 0; }
+@media (max-width: 600px) {
+    .header h1 { font-size: 1.5rem; letter-spacing: 1px; }
+    .header .sub { font-size: .76rem; }
+}
+
+/* ============================================================
+   桌面端双栏布局（批次 3.2）
+   ------------------------------------------------------------
+   做法：只包裹、不移动。左栏与右栏是新增的包装 div，
+   内部所有既有节点（含全部 id）保持在原文档流位置，
+   因此 cacheDom() 拿到的引用全部有效，零 id 迁移风险。
+
+   网格必须加在「两栏的直接父元素」.main-content 上（见下方），
+   加在 .container 上只会作用于唯一子元素，两栏会退化成单列。
+
+   吸附的是「左栏」而不是 Hero 本身：
+   左栏内还有阶段详情，二者需要一起保持可见；
+   若 Hero 单独 sticky，嵌套在同样 sticky 的父级里会表现错乱。
+   左栏作为 grid 项默认拉伸到整行高度，sticky 才有活动空间。
+   ============================================================ */
+@media (min-width: 1024px) {
+    /* 关键：网格必须加在「两栏的直接父元素」上。
+       上一版写在 .container 上，而两栏被 .main-content 包着，
+       结果网格只作用于那唯一一个子元素，两栏退化成普通块级流、
+       右栏掉到左栏下方 —— 所以怎么看都是单列。 */
+    .main-content {
+        display: grid;
+        /* v2.3.0：head / rail 两行是全宽的。
+           必须把 .header 显式放进 head 区域 —— 否则 Grid 会把它
+           自动塞进最后的隐式行，标题就跑到页脚下面去了（真实 BUG）。
+
+           v2.3.1：左栏的 grid-row 十字跨到页脚行（left 起于 right、止于 footer）。
+           sticky 的可用范围 = 自身 grid 区域的高度，原先左栏只占第 3 行，
+           于是滚到最后一段时它已经「用完」了吸附行程，随内容一起被页脚
+           和右栏尾部顶出视口 —— 表现为「滑到最下面时主倒计时框突然消失」。
+           跨到页脚行后，吸附行程覆盖到页面最后一行，全程不再掉出视口。 */
+        grid-template-areas:
+            "head  head"
+            "rail  rail"
+            "left  right"
+            "left  footer";
+        grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+        grid-template-rows: auto auto auto auto;
+        column-gap: 22px;
+        row-gap: 0;
+        align-items: start;
+    }
+    .main-content > .header { grid-area: head; }
+    .main-content > .rail   { grid-area: rail; }
+    .pg-col-left   { grid-area: left; }
+    .pg-col-right  { grid-area: right; }
+    .main-content > .footer { grid-area: footer; }
+
+    /* 页脚要压在左栏之上。
+       左栏跨到了页脚行，若页脚仍在左栏之下，吸住的卡片会盖住页脚文字；
+       反过来让页脚「滑过」左栏才是正确的滚动语义（页脚是文档末尾）。
+       注意：z-index 只在同层叠上下文里比较，所以直接给两者定值即可。 */
+    .pg-col-left { z-index: 6; }
+    .main-content > .footer { position: relative; z-index: 7; }
+
+    .container { max-width: 1040px; }
+
+    /* 左栏吸附；align-self: start 避免被拉伸后 sticky 失效 */
+    .pg-col-left {
+        position: sticky;
+        top: 16px;
+        align-self: start;
+        z-index: 6;
+    }
+    /* 两栏最后一张卡片不留底部外边距，避免栏高不齐 */
+    .pg-col-left > *:last-child,
+    .pg-col-right > *:last-child { margin-bottom: 0; }
+    .pg-col-right > .phase-detail { margin-bottom: 20px; }
+}
+
+/* 1024px 以下维持单栏：两个包装 div 退回普通块级流 */
+@media (max-width: 1023px) {
+    .pg-col-left, .pg-col-right { display: block; }
+    /* 单栏下轨道内的导航改为可横滑，不再挤成两行 */
+    .rail .phase-nav { padding-bottom: 4px; }
+}
+
+/* 窄屏：考试卡改为单列 —— 倒计时整行右对齐，
+   否则 390px 宽下网格会把科目名压到 122px，难以阅读 */
+@media (max-width: 600px) {
+    .exam-card { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+    .exam-card .countdown-mini { justify-content: flex-end; }
+    .exam-card .countdown-mini .cd-num { font-size: 1.2rem; }
+    .card-band { margin: -14px -16px 12px; padding: 8px 16px; }
+}
+
+/* ============================================================
+   v2.2.0 · 节假日日历
+   ============================================================ */
+.holiday-modal {
+    width: 100%;
+    max-width: 520px;
+    max-height: 88vh;
+    overflow-y: auto;
+    background: var(--bg-card);
+    border: var(--bd) solid var(--border);
+    border-radius: var(--r-card);
+    box-shadow: var(--shadow-lift);
+    padding: 20px;
+}
+.hm-head {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 12px; margin-bottom: 16px;
+}
+.hm-title { font-size: 1.05rem; font-weight: 800; color: var(--text); letter-spacing: 1px; }
+.hm-sub { font-size: .72rem; color: var(--text-3); margin-top: 3px; }
+.hm-close {
+    appearance: none; border: 0; background: transparent; cursor: pointer;
+    color: var(--text-3); font: inherit; font-size: 1rem; line-height: 1;
+    padding: 4px 8px; border-radius: var(--r-sharp);
+}
+.hm-close:hover { color: var(--text); background: var(--bg-soft); }
+
+/* 下一个假期 */
+.hm-next {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 14px; margin-bottom: 16px;
+    background: var(--accent-weak);
+    border-radius: var(--r-btn);
+}
+.hm-next-icon {
+    width: 34px; height: 34px; flex: none;
+    display: grid; place-items: center;
+    background: var(--accent); color: var(--accent-text);
+    border-radius: var(--r-sharp);
+    font-weight: 800; font-size: 1rem;
+}
+.hm-next-main { flex: 1; min-width: 0; }
+.hm-next-name { font-size: .95rem; font-weight: 800; color: var(--text); }
+.hm-next-meta { font-size: .72rem; color: var(--text-2); margin-top: 2px; }
+.hm-next-days {
+    flex: none; text-align: right;
+    font-family: var(--font-mono); font-size: 1.6rem; font-weight: 800;
+    color: var(--accent); font-variant-numeric: tabular-nums; line-height: 1;
+}
+.hm-next-days small {
+    display: block; font-family: var(--font-sans); font-size: .62rem;
+    color: var(--text-3); font-weight: 600; margin-top: 3px;
+}
+
+/* 月份标签 */
+.hm-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;          /* 不用 baseline：按钮混有「纯文字」与「文字+计数」
+                                     两种内容，baseline 对齐会把它们错开几个像素 */
+    gap: 5px;
+    margin-bottom: 14px;
+}
+.hm-tab {
+    appearance: none; font: inherit; cursor: pointer;
+    border: var(--bd) solid var(--border); background: transparent;
+    color: var(--text-2); border-radius: var(--r-btn);
+    padding: 4px 10px; font-size: .74rem; font-weight: 700;
+    line-height: 1.25;            /* 固定行高，行高不一致同样会把按钮错开 */
+    transition: var(--tr);
+    display: inline-flex; align-items: baseline; gap: 6px;
+}
+.hm-tab:hover { border-color: var(--accent); color: var(--accent); }
+.hm-tab[aria-selected="true"] {
+    background: var(--accent); border-color: var(--accent); color: var(--accent-text);
+}
+/* 月份计数：用「·」分隔并统一字距，避免「2026/10」与「7 天」粘成「2026/107 天」 */
+.hm-tab .cnt {
+    font-size: .64rem;
+    opacity: .85;
+    letter-spacing: .3px;
+    white-space: nowrap;
+}
+
+/* 网格 */
+.hm-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+.hm-wd {
+    text-align: center; font-size: .66rem; font-weight: 700;
+    color: var(--text-3); letter-spacing: 1px; padding-bottom: 5px;
+}
+.hm-wd.we { color: var(--accent); }
+.hm-day {
+    position: relative; min-height: 52px;
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    padding: 5px 3px 4px;
+    background: var(--bg-inset);
+    border: 1px solid transparent;
+    border-radius: 3px;
+    transition: var(--tr); overflow: hidden;
+}
+.hm-day .hm-n {
+    font-family: var(--font-mono); font-size: .8rem; font-weight: 600;
+    color: var(--text-2); line-height: 1.1; font-variant-numeric: tabular-nums;
+}
+.hm-day .hm-lb {
+    font-size: .56rem; line-height: 1.15; text-align: center;
+    color: var(--text-3); letter-spacing: .2px; max-width: 100%;
+}
+.hm-day.out { opacity: .3; }
+.hm-day.we .hm-n { color: var(--text-3); }
+/* 放假日：整格实色 + 放大圆角，与周围方格的刻意反差 */
+.hm-day.holiday {
+    background: var(--accent); border-color: var(--accent); border-radius: 8px;
+}
+.hm-day.holiday .hm-n { color: var(--accent-text); font-weight: 800; }
+.hm-day.holiday .hm-lb { color: var(--accent-text); font-weight: 700; opacity: .92; }
+/* 调休上班：斜纹 */
+.hm-day.workday {
+    background: repeating-linear-gradient(45deg, transparent 0 4px, var(--bg-soft) 4px 8px);
+}
+.hm-day.workday .hm-n { color: var(--text-3); }
+.hm-day.workday .hm-lb { color: var(--text-3); font-weight: 700; }
+/* 预估：第二色整格，明确区别于「已公布」 */
+.hm-day.tentative {
+    background: var(--info-block); border-color: transparent; border-radius: 8px;
+}
+.hm-day.tentative .hm-n { color: var(--info-block-fg); font-weight: 800; }
+.hm-day.tentative .hm-lb { color: var(--info-block-fg); font-weight: 700; opacity: .9; }
+/* ---------- 农历与节气 ----------
+   一格最多三行小字：假期名（.hm-lb）/ 节气（.hm-term）/ 农历（.hm-lu）。
+   三者共用同一档 0.56rem 小字，不抢日号的主体地位。
+   节气带一个空心方框，与图例里的「节气」样例一致；农历则是最次级的纯文字。 */
+.hm-day .hm-term {
+    font-size: .56rem;
+    line-height: 1.15;
+    color: var(--accent);
+    font-weight: 700;
+    letter-spacing: .2px;
+    white-space: nowrap;
+    max-width: 100%;
+    /* 空心方框：图例画的是「有框」，格子里也必须真的有框，
+       否则图例就在骗人（这里踩过一次）。 */
+    border: 1px solid currentColor;
+    border-radius: var(--r-sharp);
+    padding: 0 3px;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+.hm-day .hm-lu {
+    font-size: .56rem;
+    line-height: 1.15;
+    color: var(--text-3);
+    letter-spacing: .2px;
+    white-space: nowrap;
+    max-width: 100%;
+    overflow: hidden;
+}
+/* 实色格（放假 / 预估）上用卡片前景色，否则小字会糊在底色里 */
+.hm-day.holiday .hm-term,
+.hm-day.tentative .hm-term,
+.hm-day.holiday .hm-lu,
+.hm-day.tentative .hm-lu { color: var(--accent-text); opacity: .9; }
+/* 调休斜纹格的底纹较花，小字统一压到最次级 */
+.hm-day.workday .hm-term,
+.hm-day.workday .hm-lu { color: var(--text-3); }
+/* 非本月的补格不需要农历与节气，避免喧宾夺主 */
+.hm-day.out .hm-lu,
+.hm-day.out .hm-term { display: none; }
+/* 窄屏收紧一档，保证三行仍在 56px 内 */
+@media (max-width: 600px) {
+    .hm-day .hm-term,
+    .hm-day .hm-lu { font-size: .5rem; }
+    .hm-day .hm-term { padding: 0 2px; }
+}
+
+/* ---------- 「今天」的描边权重修正 ----------
+   必须用 #calCard 前缀把权重提到 (1,1,0)：
+   `#calCard.card--notch`（含 `border-radius: var(--r-sharp)` 其后的
+   `border-width` 简写回退）是 (1,1,0) 且位置更靠后，
+   而 `.hm-day.today` 只有 (0,2,0) —— 于是 border-width 被压回 1px，
+   图例画的是 2px 方框、格子里却是 1px，看起来就是「图例有框、实际没有」。
+   节气那一处是另一个原因：图例有框而格子里只有纯文字，见上方的 .hm-term。 */
+#calCard .hm-day.today { border-color: var(--text); border-width: 2px; }
+.hm-day.today .hm-n::after {
+    content: ''; position: absolute; left: 50%; bottom: 3px;
+    transform: translateX(-50%);
+    width: 4px; height: 2px; background: var(--text);
+}
+.hm-day.today.holiday .hm-n::after,
+.hm-day.today.tentative .hm-n::after { background: var(--accent-text); }
+
+/* 图例 */
+.hm-legend {
+    display: flex; flex-wrap: wrap; gap: 14px;
+    margin-top: 14px; padding-top: 12px;
+    border-top: var(--bd) solid var(--border);
+    font-size: .68rem; color: var(--text-3);
+}
+.hm-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.hm-legend i { width: 11px; height: 11px; border-radius: 2px; display: block; }
+.hm-legend i.h { background: var(--accent); }
+.hm-legend i.w { background: repeating-linear-gradient(45deg, transparent 0 3px, var(--bg-soft) 3px 6px); border: 1px solid var(--border); }
+.hm-legend i.t { border: 2px solid var(--text); }
+.hm-legend i.e { background: var(--info-block); }
+/* 节气：用文字色的小方块与日期格里的节气小字呼应，
+   不用强调色实心 —— 那会和「法定放假」的色块混淆。 */
+.hm-legend i.s {
+    background: transparent;
+    border: 1.5px solid var(--accent);
+    color: var(--accent);
+}
+
+/* 当月清单 */
+.hm-list { margin-top: 12px; }
+.hm-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 9px 2px; border-bottom: 1px solid var(--border);
+    font-size: .82rem;
+}
+.hm-item:last-child { border-bottom: 0; }
+.hm-item-date {
+    font-family: var(--font-mono); font-size: .74rem;
+    color: var(--text-3); min-width: 56px; flex: none;
+}
+.hm-item-name { font-weight: 700; color: var(--text); flex: 1; }
+.hm-item-when {
+    font-size: .72rem; color: var(--text-3); font-variant-numeric: tabular-nums;
+}
+.hm-item.is-tent .hm-item-name { color: var(--text-3); font-weight: 500; }
+.hm-item-tag {
+    font-size: .6rem; padding: 1px 6px; border-radius: var(--r-sharp);
+    background: var(--bg-soft); color: var(--text-3);
+    border: 1px dashed var(--border-strong);
+}
+
+@media (max-width: 600px) {
+    .holiday-modal { padding: 16px 14px; max-height: 92vh; }
+    .hm-day { min-height: 42px; padding: 4px 2px; }
+    .hm-day .hm-n { font-size: .74rem; }
+    .hm-day .hm-lb { font-size: .5rem; }
+    .hm-next-days { font-size: 1.35rem; }
+}
+
+/* ============================================================
+   v2.2.1 · 补齐预览的设计语言
+   ------------------------------------------------------------
+   上一版的失误：迁移了配色 token 与网格，却没有迁移「设计本身」——
+   Hero 大数字、卡片彩色页眉、各卡色调层次都没做，
+   导致正式页面与预览看起来是两个东西。
+   本段把缺的部分补齐，并让 Hero 数字真正继承 --n 字号系数
+   （style.css 里原本没有任何规则消费 --n，所以数字一直是 2.2rem）。
+   ============================================================ */
+
+/* ---------- 卡片通用外壳：新卡片类 pg-card（与既有 card 类并存） ---------- */
+.pg-card {
+    position: relative;
+    background: var(--bg-card);
+    border: var(--bd) solid var(--border);
+    border-radius: var(--r-card);
+    box-shadow: var(--shadow);
+    padding: 18px 22px;
+    margin-bottom: 20px;
+    overflow: hidden;              /* 让内部页眉贴合圆角 */
+}
+.pg-card > .card-band { margin: -18px -22px 16px; }
+.pg-card--tinted { background: var(--card-tint); }
+/* 页眉配色按区块区分，同一屏出现多色块 */
+#currentExam > .card-band { background: var(--info); color: #08222B; }
+#subjectSelector > .card-band { background: var(--accent); color: var(--accent-text); }
+#scheduleCard > .card-band { background: var(--accent); color: var(--accent-text); }
+html[data-theme="night"] #currentExam > .card-band { color: var(--accent-text); }
+
+/* 既有卡片：统一到新的边距与圆角体系，并补上卡片内的页眉定位 */
+.current-exam,
+.subject-selector { position: relative; overflow: hidden; }
+.current-exam { padding: 18px 22px; }
+.subject-selector { padding: 18px 22px; }
+.current-exam > .card-band { margin: -18px -22px 14px; }
+.subject-selector > .card-band { margin: -18px -22px 14px; }
+
+/* ---------- Hero：大数字无方块 + 真正的大字号 ---------- */
+.hero-countdown { padding: 22px; }
+
+/* 数字块：去掉旧方块，让数字直接坐在实色底上 */
+.hero-countdown .timer {
+    display: flex; flex-direction: column;
+    align-items: center; gap: 8px;
+}
+/* 主数字：天数，视觉主体 */
+.hero-countdown .timer .t-main {
+    display: flex; align-items: baseline; gap: 8px;
+    line-height: .9;
+}
+.hero-countdown .timer .t-main .num {
+    font-size: clamp(2.6rem, calc(var(--n, 24) * 0.46rem), 4.6rem);
+    font-weight: 800; letter-spacing: -.04em;
+    color: var(--hero-num); font-variant-numeric: tabular-nums;
+}
+.hero-countdown .timer .t-main .unit {
+    font-size: .95rem; font-weight: 700;
+    color: var(--hero-fg); opacity: .75; letter-spacing: 1px;
+}
+/* 次级：时分秒一行 */
+.hero-countdown .timer .t-rest {
+    display: flex; align-items: baseline; gap: 5px;
+    font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+}
+.hero-countdown .timer .t-rest .t-item {
+    display: inline-flex; align-items: baseline; gap: 2px;
+}
+.hero-countdown .timer .t-rest .num {
+    font-size: 1.05rem; font-weight: 700; color: var(--hero-fg);
+}
+.hero-countdown .timer .t-rest .unit {
+    font-size: .62rem; color: var(--hero-fg); opacity: .6;
+}
+.hero-countdown .timer .t-rest .sep {
+    font-size: .95rem; color: var(--hero-fg); opacity: .4;
+}
+
+/* ---------- 阶段导航：激活项做成「地图标记」而非方块 ---------- */
+.phase-tab.active {
+    background: var(--accent);
+    color: var(--accent-text);
+    border-radius: var(--r-btn);
+    box-shadow: var(--shadow-btn);
+}
+.phase-tab .pt-sub { letter-spacing: .2px; }
+
+/* ---------- 日程区：卡片内的日期组不要双份留白 ---------- */
+#scheduleCard .day-group:last-child { margin-bottom: 0; }
+#scheduleCard .section-title { display: none; }   /* 标题已上移到页眉 */
+#scheduleCard .cd-legend { margin-bottom: 0; }
+
+@media (max-width: 600px) {
+    .hero-countdown { padding: 16px; }
+    .hero-countdown .timer .t-main .num { font-size: clamp(2rem, calc(var(--n, 22) * 0.40rem), 3.2rem); }
+    .hero-countdown .timer .t-rest .num { font-size: .95rem; }
+    .pg-card { padding: 14px 16px; }
+    .pg-card > .card-band { margin: -14px -16px 12px; }
+}
+
+/* ============================================================
+   v2.3.0 · 布局归属与设计层对齐（迁移计划书 B1 / B2）
+   ------------------------------------------------------------
+   本段解决两件事：
+
+   1) 页头标题跑到整页最下方的 BUG。
+      根因不是定位，而是 CSS Grid 的「自动放置」：
+      .main-content 声明了 grid-template-areas，但 .header 没有分到
+      任何区域，于是被自动塞进了最后的隐式行 —— 实测 y=1547，
+      而页脚在 y=1487，标题就落到了页脚下面。
+      修复：给 .header 显式 grid-area，并把 head / rail 两行写进
+      grid-template-areas，让「页头 → 阶段轨道 → 双栏 → 页脚」
+      的视觉顺序与 demo 一致。
+
+   2) 阶段导航从「左栏里的卡片 tab」改回 demo 的「全宽轨道」，
+      并把 #phaseNav 从 .pg-col-left 移到轨道内（id 未变）。
+   ============================================================ */
+
+/* ---------- 阶段轨道：全宽，与 demo 的 .rail 同构 ---------- */
+.rail {
+    background: var(--bg-card);
+    border: var(--bd) solid var(--border);
+    border-radius: var(--r-card);
+    box-shadow: var(--shadow);
+    padding: 14px 18px 8px;
+    margin-bottom: 20px;
+    /* 注意：绝对不要在这里加 overflow: hidden。
+       节点旋转 45° 后会略微超出盒子，overflow 会把菱形顶部裁平。 */
+}
+.rail-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+.rail-head .rt {
+    font-size: .72rem;
+    font-weight: 800;
+    letter-spacing: 2.4px;
+    color: var(--text-2);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+/* 标题左侧的小竖条：与 .section-title 同一套语言 */
+.rail-head .rt::before {
+    content: '';
+    display: inline-block;
+    width: 4px; height: 12px;
+    background: var(--accent);
+    border-radius: var(--r-sharp);
+}
+.rail-head .rh {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-size: .72rem;
+    color: var(--text-3);
+}
+/* 轨道内的状态横幅：不再单独占一行高度，改为靠右的即时状态 */
+.rail-head .status-msg {
+    display: none;
+    margin: 0;
+    font-size: .72rem;
+    letter-spacing: .5px;
+    color: var(--accent);
+    text-align: right;
+}
+.rail-head .status-msg.show { display: inline; }
+
+/* 「回到当前阶段」：直角小按钮，强调色弱底 ——
+   与页面其他次要动作（.action-btn-secondary / .cb-act）同一套语言。
+   注意这条规则原先漏写了：按钮存在但没有任何样式，浏览器就用默认外观，
+   看起来像上个时代留下的控件。 */
+.rail-back {
+    appearance: none;
+    font: inherit;
+    font-size: .68rem;
+    font-weight: 700;
+    letter-spacing: .5px;
+    cursor: pointer;
+    padding: 3px 9px;
+    color: var(--accent);
+    background: var(--accent-weak);
+    border: 1.5px solid transparent;
+    border-radius: var(--r-sharp);
+    transition: var(--tr);
+    white-space: nowrap;
+}
+.rail-back:hover { border-color: var(--accent); }
+.rail-back:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.rail-back[hidden] { display: none; }
+
+/* 轨道内的导航条：去掉自身的卡片外壳，避免「卡片套卡片」
+   这里的选择器权重高于上面那条 html[data-theme="camp"] .phase-nav */
+html[data-theme] .rail .phase-nav,
+.rail .phase-nav {
+    display: flex;
+    align-items: flex-start;
+    gap: 0;
+    margin: 0;
+    padding: 4px 0 6px;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    overflow-x: auto;
+}
+
+/* ---------- 节点：旋转 45° 的方块（菱形），不是圆点 ---------- */
+.rail .phase-tab {
+    --dot: 11px;
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    padding: 12px 4px 2px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--text-2);
+    font-size: .82rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    line-height: 1.25;
+    text-align: center;
+    cursor: pointer;
+    white-space: nowrap;
+    box-shadow: none;
+}
+/* 连接线：从上一个节点连到本节点，两端都让开菱形本体。
+   ------------------------------------------------------------
+   原写法 left:-50%; width:100% 有两个问题：
+   1) 只走「一个 tab 宽」的一半行程 —— 线从 (tab左边 − 半个 tab) 开始，
+      而菱形在 tab 中心，所以线既没接到上一个节点；
+   2) width:100% 让它一路穿进本节点的菱形里（实测线右端超出菱形中心 94px）。
+
+   现在：以本节点中心为右端、向左延伸半个 tab，再让开菱形的一半视觉宽度。
+   垂直位置必须按**渲染后的真实高度**算，不能按宽度算 ——
+   ::after 是 border-box（9px 含 1.5px 边框），中心在 4.5px，
+   而 `--dot / 2` 得到 5.5px，实测线比菱形中心低 1px，
+   5 个节点一致偏 1px，整条轨道看起来就是「歪的」。
+   取 `calc(var(--dot) / 2 - 1px)` = 4.5px，与菱形中心对齐。 */
+.rail .phase-tab::before {
+    content: '';
+    position: absolute;
+    top: calc(var(--dot) / 2 - 1px);
+    left: 50%;
+    /* 0.82 ≈ 半边对角线(dot × 0.707) + 0.11 的重叠量：
+       让线端刚好搭在菱形最宽处，两侧各留约 0.5px。
+       原来的 0.71 + 2px 会留出约 6.6px 空隙，线看起来「悬空、没接上」。 */
+    width: calc(50% - (var(--dot) * 0.82));
+    height: 1px;
+    margin-left: calc(-1 * (50% - (var(--dot) * 0.82)));
+    background: var(--border-strong);
+    pointer-events: none;
+}
+.rail .phase-tab:first-child::before { display: none; }
+.rail .phase-tab:hover { background: transparent; color: var(--text); }
+.rail .phase-tab .pt-sub {
+    font-size: .62rem;
+    font-weight: 500;
+    opacity: .85;
+    letter-spacing: 0;
+}
+
+/* ---------- B2 · 菱形节点：三态（已结束 / 当前 / 未来） ---------- */
+/* 所有主题的默认节点：白底 + 实线描边 + 45° 旋转 */
+.rail .phase-tab::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 0;
+    width: 9px; height: 9px;
+    box-sizing: border-box;
+    background: var(--bg-card);
+    border: 1.5px solid var(--border-strong);
+    /* 用 transform 居中，不要用 margin-left: -4.5px ——
+       ::after 是 content-box，真实宽度 = 9 + 左右边框 3px = 12px，
+       按 9px 补偿会偏右 1.5px；再叠上 .active 的 border-width:2px
+       偏得更多（实测菱形中心比文字中心右移 4.5px）。
+       translate(-50%) 按真实边框盒计算，且与尺寸无关。 */
+    transform: translateX(-50%) rotate(45deg);
+    transition: background var(--tr), border-color var(--tr);
+}
+/* 已结束：填充实心 + 节点名降噪（不做绿色对勾） */
+.rail .phase-tab.done { opacity: 1; color: var(--text-3); }
+.rail .phase-tab.done::after {
+    background: var(--border-strong);
+    border-color: var(--border-strong);
+}
+/* 但「正在查看一个已结束的阶段」时，实心灰会让人以为只是历史标记。
+   此时改回强调色描边，明确「你现在看的是这里」。 */
+.rail .phase-tab.done.active::after {
+    background: var(--bg-card);
+    border-color: var(--accent);
+}
+/* 当前：强调色描边（比「进行中」弱一档）。
+   刻意不改 border-width：改动边框宽会让旋转后的菱形尺寸跟着变，
+   节点大小就会随状态跳动。用外发光区分强弱即可。 */
+.rail .phase-tab.active { background: transparent; color: var(--accent); box-shadow: none; }
+.rail .phase-tab.active::after {
+    background: var(--bg-card);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-weak);
+}
+/* 进行中：强调色实心 + 外圈光晕（只有真正在考的那个阶段） */
+.rail .phase-tab.live::after {
+    background: var(--accent);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 4px var(--accent-weak);
+}
+/* 旧的圆形对勾徽章与菱形语义重复，隐藏掉 */
+.rail .phase-tab .pt-badge { display: none; }
+
+/* ---------- 露营主题的纹理（纯 CSS，零资源） ---------- */
+html[data-theme="camp"] .rail {
+    background-image:
+        repeating-linear-gradient(0deg, rgba(232,137,43,.10) 0 1px, transparent 1px 22px),
+        repeating-linear-gradient(90deg, rgba(232,137,43,.10) 0 1px, transparent 1px 22px);
+}
+
+/* ---------- 窄屏：轨道允许横向滚动，节点不压缩成一条线 ---------- */
+@media (max-width: 600px) {
+    .rail { padding: 12px 12px 6px; }
+    .rail .phase-tab { min-width: 58px; padding: 11px 2px 1px; font-size: .74rem; }
+    .rail .phase-tab .pt-sub { font-size: .56rem; }
+}
+
+/* ============================================================
+   v2.3.0 · 设计对齐补丁（对照 demo 实测差异，逐项收敛）
+   ------------------------------------------------------------
+   下面每一项都由 parity_probe.py 的实测数字驱动，不是凭感觉调的。
+   ============================================================ */
+
+/* 缺角卡需要定位上下文，否则 ::after 折边会跑到别处 */
+#calCard, #scheduleCard { position: relative; }
+
+/* 月历日格高度对齐 demo 的 56px */
+.hm-day { min-height: 56px; }
+/* 圆角与图例样例统一到 --r-sharp。
+   基础样式里写的是 3px，而图例样例（.hm-legend i）是 2px ——
+   两者并排出现时一眼就能看出不是同一个东西。
+   放假 / 预估格的 8px 是刻意的反差，保留。 */
+.hm-day { border-radius: var(--r-sharp); }
+
+/* 日程卡：考试条目做成「左栏信息 + 右栏倒计时」的两列网格。
+   demo 的 .exam 是 grid 1fr auto；生产页早先是四列（含角标列），
+   这里收敛为两列，倒计时整体右对齐。
+   注意：窄屏另有单列规则（见上面的 max-width:600px），此处不覆盖它。 */
+@media (min-width: 601px) {
+    /* 两列：左栏吃掉剩余宽度，右栏按倒计时的内容宽取宽。
+       刻意让右栏 auto、左栏 1fr ——
+       写成 auto + minmax(0,1fr) 时，左栏的 auto 会按「收缩后的
+       内容宽」计算（.exam-main 带 min-width:0，内容宽可塌缩），
+       结果左栏只拿到 198px、右栏拿到 182px，卡片右侧还剩 45px
+       却是空的，而「1时15分」已经被裁掉。 */
+    .exam-card {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 2px 12px;
+        align-items: center;
+    }
+    .exam-card .exam-main { min-width: 0; }
+    /* 左栏用满分到的轨道；倒计时贴右，否则 auto 轨道右侧会留一条缝 */
+    .exam-card .exam-main { justify-self: stretch; }
+    .exam-card .countdown-mini { justify-self: end; }
+    /* .meta 在基础样式里是 flex:none（不伸不缩），
+       这会让它把内容宽当成硬性下限，网格因此无法把富余宽度分给左栏。
+       改成可伸缩并允许内部换行，左栏才拿得到剩余空间。 */
+    .exam-card .meta { flex: 1 1 auto; min-width: 0; flex-wrap: wrap; gap: 5px; }
+    /* 「1时15分」这类时长说明收一档字号，给同一行的时间与标签让位：
+       实测 .meta 需要 206px 而轨道只有 194px，右端会被裁掉。 */
+    .exam-card .meta .dur-note { font-size: .64rem; }
+    .exam-card .meta .time-range,
+    .exam-card .meta .dur-note { white-space: nowrap; }
+    .exam-card .countdown-mini {
+        justify-content: flex-end;
+        align-items: baseline;
+        white-space: nowrap;
+    }
+    /* 倒计时数字是 flex 项，默认 min-width:auto 会允许它被压到
+       比内容还窄，必须显式禁止收缩。 */
+    .exam-card .countdown-mini .cd-num { flex: none; }
+    /* 字号收敛：demo 在同样的倒计时段里用的是较小字号
+       （.ex-cd .big 16.3px），这里取 1.02rem，
+       避免倒计时段抢走左栏「时间 / 标签 / 时长」的宽度。 */
+    .exam-card .countdown-mini .cd-num { font-size: 1.02rem; }
+    .exam-card .countdown-mini .cd-unit { font-size: .6rem; }
+    .exam-card .countdown-mini .cd-sep { margin: 0 1px; }
+}
+
+/* ============================================================
+   v2.3.0 · 卡片实色语言与文字层级（迁移计划书 B3 / B4）
+   ------------------------------------------------------------
+   对齐 demo 的三件事：
+   1) 「实色卡」：露营主题下整张卡是色块，其他主题退回普通卡片
+      —— 兜底变量必须存在，否则彩块类会把卡片变成空白。
+   2) 卡内页眉 .card-band 的通用外壳（.pg-card）。
+   3) Hero 的文字层级：目标行 / 大数字 / 精确行 / 状态条，
+      字号用容器查询按「卡片自身宽度」算，永不溢出。
+   ============================================================ */
+
+/* ---------- 实色卡 / 淡色卡 ---------- */
+.pg-card--solid {
+    background: var(--card-solid-bg, var(--bg-card));
+    color: var(--card-solid-fg, var(--text));
+    border-color: transparent;
+}
+.pg-card--tinted { background: var(--card-tint, var(--bg-card)); }
+
+/* 各主题的实色卡兜底：默认等于普通卡片，所以彩块类可以安全复用 */
+:root {
+    --card-solid-bg: var(--bg-card);
+    --card-solid-fg: var(--text);
+    --card-solid-line: var(--border);
+}
+/* 露营主题：大胆用色。前景色按 WCAG 对比度选过：
+   #1F1A12 on #F7CE6B ≈ 10.9:1 */
+html[data-theme="camp"] #holidayCard {
+    --card-solid-bg: var(--camp-sand, #F7CE6B);
+    --card-solid-fg: #1F1A12;
+    --card-accent: var(--camp-sand, #F7CE6B);
+    --accent-text: #1F1A12;
+}
+/* Hero 本身就是实色块，页眉色跟着它走 */
+html[data-theme="camp"] .hero-countdown { --card-accent: var(--camp-sun, #E8892B); }
+/* 考试进程卡：demo 用草绿实色块 */
+html[data-theme="camp"] #currentExam {
+    --card-solid-bg: var(--camp-tree, #A7D9A0);
+    --card-solid-fg: #1F1A12;
+    --card-accent: var(--camp-tree, #A7D9A0);
+    --accent-text: #1F1A12;
+}
+/* 其他主题：进程卡用极淡的信息色，保留「这一块是状态」的暗示 */
+html:not([data-theme="camp"]) #currentExam {
+    --card-solid-bg: var(--info-weak, var(--bg-card));
+    --card-solid-fg: var(--text);
+}
+
+/* 页眉上的动作按钮：直角小按钮，压在色条上 */
+.card-band .cb-act {
+    appearance: none; font: inherit; cursor: pointer;
+    border: 1.5px solid currentColor;
+    background: transparent;
+    color: inherit;
+    border-radius: var(--r-sharp);
+    padding: 2px 9px;
+    font-size: .66rem; font-weight: 700; letter-spacing: .5px;
+    opacity: .9;
+    transition: var(--tr);
+}
+.card-band .cb-act:hover { opacity: 1; background: rgba(255,255,255,.22); }
+
+/* 淡色卡与实色卡上的 pill / 次要文字都跟着卡片前景色走 */
+.pg-card--solid .nh-meta,
+.pg-card--solid .nh-days small { color: var(--card-solid-fg, var(--text-3)); opacity: .75; }
+
+/* ---------- Hero 文字层级（对齐 demo 的 .hero） ---------- */
+.hero-countdown {
+    text-align: left;
+    /* 让下面的 cqw 字号以「卡片自身宽度」为基准 */
+    container-type: inline-size;
+}
+.hero-countdown .h-date {
+    font-size: .72rem;
+    color: var(--hero-fg);
+    opacity: .8;
+    letter-spacing: .4px;
+    margin: 2px 0 10px;
+}
+/* 精确行：左侧一道实色细线，与数字同色 */
+.hero-countdown .timer .t-rest {
+    margin-top: 10px;
+    padding-left: 12px;
+    border-left: 3px solid var(--hero-num);
+    justify-content: flex-start;
+}
+.hero-countdown .timer .t-rest .num { font-weight: 800; }
+
+/* 大数字字号：系数 --n × 卡片宽度(1cqw)。
+   回退值 --n-fallback 只给不支持容器查询的老浏览器。 */
+.hero-countdown .timer .t-main .num {
+    font-size: var(--n-fallback, 19vw);
+    letter-spacing: -.04em;
+    white-space: nowrap;
+}
+@container (min-width: 1px) {
+    .hero-countdown .timer .t-main .num { font-size: calc(var(--n, 22) * 1cqw); }
+    .hero-countdown .timer .t-main .unit { font-size: calc(var(--u, 4.2) * 1cqw); }
+}
+.hero-countdown .timer .t-main {
+    white-space: nowrap;      /* 关键：flex-wrap 拦不住文字折行 */
+    min-width: 0;
+}
+
+/* ---------- 状态条（pill）：直角方点，不是胶囊 ---------- */
+.stat-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 14px;
+}
+.pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: .72rem;
+    font-weight: 600;
+    letter-spacing: .4px;
+    border-radius: var(--r-sharp);
+    padding: 4px 9px;
+    background: var(--bg-soft);
+    color: var(--text-2);
+    border: var(--bd) solid var(--border);
+}
+.pill.accent { background: var(--accent-weak); color: var(--accent); border-color: transparent; }
+.pill.info { background: var(--info-weak); color: var(--info); border-color: transparent; }
+.pill .dt {
+    width: 6px; height: 6px;
+    border-radius: var(--r-sharp);
+    background: currentColor;
+    flex: none;
+}
+.pill .dt.pulse { animation: pulseDot 1.6s ease-in-out infinite; }
+
+/* Hero 内部的 pill 必须跟 Hero 的前景色走：
+   实色 Hero 上再用浅底浅字会糊成一片。
+   rgba(255,255,255,.55) 叠在 #E8892B 上约 #F4C489，配 #1F1A12 约 8.4:1。 */
+.hero-countdown .stat-row .pill {
+    background: rgba(255,255,255,.55);
+    color: var(--hero-fg);
+    border-color: rgba(0,0,0,.16);
+}
+/* 夜航：Hero 底色就是深色卡片，白 8% 叠上去仍是深灰，
+   再用 --hero-fg（中等灰）当字色只有 2.11:1。
+   注意选择器必须带上 .hero-countdown 才压得住上面那条
+   「.hero-countdown .stat-row .pill」（同为 (0,3,0)，靠后即胜；
+   早先写成 html[data-theme="night"] .hero-countdown .stat-row .pill
+   只有 (0,3,1) 却被后面的规则反超 —— 实测掉到 1.18:1）。 */
+html[data-theme="night"] .hero-countdown .stat-row .pill,
+html[data-theme="night"] .hero-countdown #heroStats .pill {
+    background: rgba(255,255,255,.08);
+    border-color: rgba(255,255,255,.16);
+    color: var(--text-1, #E6EDF3);
+}
+html[data-theme="night"] .hero-countdown #heroStats .pill.accent {
+    background: var(--accent);
+    color: var(--accent-text);
+    border-color: transparent;
+}
+/* 强调 pill 在实色 Hero 上改用实色底，保证对比度 */
+.hero-countdown .stat-row .pill.accent {
+    background: var(--hero-fg);
+    color: var(--hero-bg);
+    border-color: transparent;
+    font-weight: 700;
+}
+
+/* ---------- 下一个假期卡 ---------- */
+.next-hol {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+.next-hol .nh-l { display: flex; align-items: center; gap: 12px; min-width: 0; }
+/* 图章式方片：接近直角，色块 + 字，不做圆角图标 */
+.nh-icon {
+    flex: none;
+    width: 34px; height: 34px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: var(--card-solid-fg, var(--accent));
+    color: var(--card-solid-bg, var(--accent-text));
+    border-radius: var(--r-sharp);
+    font-size: 1rem; font-weight: 800;
+}
+.nh-name { font-size: 1.02rem; font-weight: 800; letter-spacing: .3px; }
+.nh-meta { font-size: .72rem; margin-top: 2px; }
+.nh-r { text-align: right; flex: none; }
+.nh-days {
+    display: inline-flex; align-items: baseline; gap: 3px;
+    font-family: var(--font-display);
+    font-size: 1.9rem; font-weight: 800;
+    color: var(--card-solid-fg, var(--accent));
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+}
+.nh-days small { font-size: .68rem; font-family: var(--font-sans); font-weight: 700; }
+/* 假期进度：方段等分，不用圆头 */
+.nh-strip { display: flex; gap: 3px; margin-top: 12px; }
+.nh-strip i {
+    flex: 1; height: 5px;
+    background: rgba(0,0,0,.14);
+    border-radius: var(--r-sharp);
+    display: block;
+}
+.nh-strip i.on { background: var(--card-solid-fg, var(--accent)); opacity: .85; }
+
+/* ---------- 右栏日历卡内的「下一个假期」摘要条 ---------- */
+.card-next-hol {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 14px;
+    margin-bottom: 14px;
+    border-bottom: var(--bd) solid var(--border);
+}
+.card-next-hol .nh-icon {
+    background: var(--accent);
+    color: var(--accent-text);
+}
+.card-next-hol .cnh-main { flex: 1; min-width: 0; }
+.card-next-hol .cnh-name {
+    font-size: .95rem; font-weight: 800;
+    color: var(--text); letter-spacing: .3px;
+}
+.card-next-hol .cnh-meta { font-size: .7rem; color: var(--text-3); margin-top: 2px; }
+.card-next-hol .cnh-days {
+    flex: none; text-align: right;
+    font-family: var(--font-display);
+    font-size: 1.7rem; font-weight: 800;
+    color: var(--accent); line-height: 1;
+    font-variant-numeric: tabular-nums;
+}
+.card-next-hol .cnh-days small {
+    display: block; font-family: var(--font-sans);
+    font-size: .62rem; font-weight: 600; color: var(--text-3); margin-top: 3px;
+}
+
+/* ---------- 日历卡：页眉用天蓝，与日程卡的橙色页眉区分 ---------- */
+/* 页眉色跟随「天蓝」这一支色（露营用 --camp-sky，其余主题用 --info），
+   与 demo 里 #calCard 的 --card-accent: var(--camp-sky) 同一语义 */
+html[data-theme="camp"] #calCard { --card-accent: var(--camp-sky, #8FD3E8); }
+#calCard > .card-band { background: var(--card-accent, var(--info)); color: #08222B; }
+html[data-theme="night"] #calCard > .card-band { color: #06131B; }
+/* 缺角 + 折边：月历卡是右栏里最适合做形状分化的那张
+   （clip-path 会裁掉外投影，所以只用在本来就不依赖投影的卡上）
+   26px 是刻意收敛的值：demo 的 30px 在本页卡片上折得过大。 */
+#calCard.card--notch { --notch: 20px; }
+#calCard.card--notch {
+    clip-path: polygon(
+        0 0, 100% 0,
+        100% calc(100% - var(--notch)),
+        calc(100% - var(--notch)) 100%,
+        0 100%);
+}
+#calCard.card--notch::after {
+    content: '';
+    position: absolute;
+    right: 0; bottom: 0;
+    width: calc(var(--notch) * 1.42);
+    height: calc(var(--notch) * 1.42);
+    background: var(--border-strong);
+    clip-path: polygon(100% 0, 100% 100%, 0 100%);
+    pointer-events: none;
+}
+#calCard .hm-tabs { margin-top: 0; }
+#calCard .hm-list .hm-item:last-child { border-bottom: 0; }
+
+/* ---------- 日程卡的斜纹材质：让卡片之间有材质差，而不是同一种白 ---------- */
+#scheduleCard {
+    background-image: repeating-linear-gradient(
+        45deg,
+        transparent 0 6px,
+        rgba(232, 137, 43, .08) 6px 7px);
+}
+html[data-theme="night"] #scheduleCard {
+    background-image: repeating-linear-gradient(
+        45deg,
+        transparent 0 6px,
+        rgba(240, 179, 87, .06) 6px 7px);
+}
+
+/* ============================================================
+   `.hidden` 必须能压住后面定义的卡片规则
+   ------------------------------------------------------------
+   `.gaokao-content.hidden { display: none }` 写在 1329 行，
+   而 `.pg-card { display: … }` 之类写在 2600 行之后 —— 同权重靠后即胜，
+   于是给 #scheduleCard 加 .hidden 后它**仍然显示**（实测 display 还是 block，
+   切到「一诊」时 9 场高考日程照样挂在页面上）。
+   这里统一用足够高的权重兜底，避免以后再被后置规则反超。 */
+.hidden,
+.pg-card.hidden,
+section.hidden,
+div.hidden { display: none !important; }
+
+/* ============================================================
+   v2.3.1 · 标签（状态徽章）对齐 preview
+   ------------------------------------------------------------
+   原实现的两处偏差：
+   1) 徽章用 --r-pill（全圆角胶囊）。demo 的圆角只有三档
+      （2px 标签 / 5px 按钮 / 12px 卡片），胶囊只留给状态徽章之外的场景；
+      「一圆到底」正是它看起来不像 preview 的主要原因。
+   2) ce-upcoming / ce-done 用的是写死的 #f0ece4 / #b89860 / #78b078，
+      只配了 [data-theme="dark"] 这一条旧主题名 —— v2.1 改主题体系后
+      这些选择器再也不会命中，浅色主题下永远是那一套米黄，
+      与五套主题的强调色完全脱节。
+   现在统一改为消费主题 token。
+   ============================================================ */
+.ce-status-badge,
+.pd-status-badge,
+.exam-badge,
+.exam-done-badge,
+.sel-badge,
+/* 基础样式里写的是 .current-exam .ce-header .ce-status-badge（(0,3,0)），
+   比单类高，必须逐个补齐这几个后代选择器才压得住它的 --radius-full */
+.current-exam .ce-header .ce-status-badge,
+.phase-detail .pd-status-badge,
+.exam-card .exam-badge,
+.exam-card .exam-done-badge {
+    border-radius: var(--r-sharp);
+    font-weight: 700;
+    letter-spacing: .4px;
+}
+.ce-status-badge::before,
+.pd-status-badge::before,
+.exam-badge::before,
+.sel-badge::before { border-radius: var(--r-sharp); }
+
+/* 待开始：信息色弱底（对齐 demo 的 .pill.info） */
+.ce-status-badge.ce-upcoming,
+.pd-status-badge.upcoming {
+    background: var(--info-weak);
+    color: var(--info);
+}
+.ce-status-badge.ce-upcoming::before,
+.pd-status-badge.upcoming::before { background: currentColor; animation: none; }
+
+/* 进行中：强调色弱底 + 脉冲方点 */
+.ce-status-badge.ce-ongoing,
+.pd-status-badge.ongoing {
+    background: var(--accent-weak);
+    color: var(--accent);
+}
+.ce-status-badge.ce-ongoing::before,
+.pd-status-badge.ongoing::before { background: currentColor; }
+
+/* 已完成：中性降噪，不再用写死的绿色 */
+.ce-status-badge.ce-done,
+.pd-status-badge.done {
+    background: var(--bg-soft);
+    color: var(--text-3);
+}
+.ce-status-badge.ce-done::before,
+.pd-status-badge.done::before { background: currentColor; animation: none; }
+
+/* 科目时间/阶段详情里的中性角标同样收进同一套语言 */
+.exam-badge,
+.exam-done-badge,
+.sel-badge {
+    background: var(--bg-soft);
+    color: var(--text-2);
+    border: var(--bd) solid var(--border);
+}
+.exam-card.exam-now .exam-badge {
+    background: var(--accent);
+    color: var(--accent-text);
+    border-color: transparent;
+}
+
+/* 科目标签（全国统考 / 等级选考 / 民族加试）
+   ------------------------------------------------------------
+   对齐 demo 的 .tag 规格：2px 直角 + **紧凑内边距** + 0.62rem/600。
+   之前的问题不在圆角（圆角一直是 2px），而在内边距沿用旧的 2px 10px ——
+   10px 的左右留白在这么小的字号下会读成胶囊，所以「看着还是旧风格」。
+   同时保留按 tag 类型分的色相：统考用强调色、选考用信息色、加试用中性。
+   （demo 里 .tag 一律是中性灰，色相区分是本页多出来的一层语义。） */
+.tag-mandatory,
+.tag-elective,
+.tag-special,
+/* 基础样式里写的是 .exam-card .meta .tag（(0,3,0)），比单类高 ——
+   内边距与字号必须用同级的后代选择器才压得住，
+   否则 padding 会留着旧的 2px 10px，小字号下读成胶囊。 */
+.exam-card .meta .tag,
+.exam-card .meta .tag-mandatory,
+.exam-card .meta .tag-elective,
+.exam-card .meta .tag-special {
+    border-radius: var(--r-sharp);
+    border: 0;
+    padding: 2px 6px;
+    font-size: .62rem;
+    font-weight: 600;
+    letter-spacing: .4px;
+    line-height: 1.3;
+    white-space: nowrap;
+    /* 用**实色**浅底，不用 accent-weak / info-weak 那种半透明叠加。
+       demo 的 .tag 是实色（#FCE9CE），而 12% 透明度的 rgba 叠在白卡上
+       几乎看不出色块，整条标签会退化成「灰字 + 一点底色」，看着还是旧风格。 */
+    background: var(--chip-mandatory-bg, var(--bg-soft));
+    color: var(--chip-mandatory-fg, var(--text-2));
+}
+.tag-elective,
+.exam-card .meta .tag-elective {
+    background: var(--chip-elective-bg, var(--bg-soft));
+    color: var(--chip-elective-fg, var(--text-2));
+}
+.tag-special,
+.exam-card .meta .tag-special {
+    background: var(--chip-special-bg, var(--bg-soft));
+    color: var(--chip-special-fg, var(--text-2));
+}
+
+/* 各主题的实色标签底色：都取「同类色的浅一档」，
+   与卡片实色块（--card-solid-bg）同一套取色逻辑。 */
+html[data-theme="ink"] {
+    --chip-mandatory-bg: #F3E4CF; --chip-mandatory-fg: #8A5620;
+    --chip-elective-bg: #E2EAF1; --chip-elective-fg: #245A7A;
+    --chip-special-bg: #EFE8DE; --chip-special-fg: #6B6055;
+}
+html[data-theme="night"] {
+    --chip-mandatory-bg: #33291A; --chip-mandatory-fg: #F0B357;
+    --chip-elective-bg: #1B2536; --chip-elective-fg: #7FB2FA;
+    --chip-special-bg: #232A34; --chip-special-fg: #A7B4C2;
+}
+html[data-theme="board"] {
+    --chip-mandatory-bg: #FBE4E2; --chip-mandatory-fg: #A82720;
+    --chip-elective-bg: #E3ECFD; --chip-elective-fg: #1554C8;
+    --chip-special-bg: #F2F3F5; --chip-special-fg: #4B5359;
+}
+html[data-theme="celadon"] {
+    --chip-mandatory-bg: #DCEAE7; --chip-mandatory-fg: #0B544F;
+    --chip-elective-bg: #E1E7F4; --chip-elective-fg: #2A4685;
+    --chip-special-bg: #E7ECEA; --chip-special-fg: #556866;
+}
+html[data-theme="camp"] {
+    --chip-mandatory-bg: #FBE0C2; --chip-mandatory-fg: #8A4A0E;
+    --chip-elective-bg: #D9EDF6; --chip-elective-fg: #1E6B88;
+    --chip-special-bg: #FCE9CE; --chip-special-fg: #7A6754;
+}
+
+/* 选科徽章（已选 / 未选）与页头的届别徽章，一起收进同一套标签语言。
+   届别徽章原先用 --radius-full（全圆角胶囊），是页面上**唯一**仍是胶囊的元素 ——
+   它是个「届别」标签，与科目标签同理，用同一个 2px 直角更一致。 */
+.header .sub .badge {
+    border-radius: var(--r-sharp);
+    padding: 2px 8px;
+    font-size: .66rem;
+    font-weight: 700;
+    letter-spacing: .4px;
+    line-height: 1.35;
+}
+
+/* ---------- 选科徽章（已选 / 未选） ----------
+   与上面的科目标签同一套规格：2px 直角、紧凑内边距、无描边、实色浅底。
+   原本的三个偏差：
+   1) `padding: 0`（基础样式没给内边距）；
+   2) 圆点用 `border-radius: 50%` —— 页面上其他所有强调点都是 `--r-sharp` 方点；
+   3) 「已选」用写死的 `--text-elective: #2F7A45` 绿，与五套主题的强调色脱节。
+   状态色跟随科目标签的「等级选考」一支（--chip-elective-*），
+   因为选科徽章只出现在等级选考科目上，两者并排出现时应当同色。 */
+.sel-badge {
+    display: none;
+}
+.exam-card .sel-badge,
+.exam-card.subject-selected .sel-badge,
+.exam-card.subject-dimmed .sel-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 1px 6px;
+    border: 0;
+    border-radius: var(--r-sharp);
+    font-size: .58rem;
+    font-weight: 600;
+    letter-spacing: .3px;
+    line-height: 1.35;
+    white-space: nowrap;
+    background: var(--chip-special-bg, var(--bg-soft));
+    color: var(--chip-special-fg, var(--text-3));
+}
+/* 圆点改为方点，尺寸与 .card-band / .pill 的状态点一致 */
+.exam-card .sel-badge::before,
+.exam-card.subject-selected .sel-badge::before,
+.exam-card.subject-dimmed .sel-badge::before {
+    content: '';
+    width: 5px;
+    height: 5px;
+    border-radius: var(--r-sharp);
+    flex: none;
+    background: currentColor;
+}
+/* 状态色：选择器与基础规则 .exam-card.subject-selected .sel-badge 同等权重
+   （(0,3,0)）且位置更靠后，无需 !important 即可稳定生效。 */
+.exam-card.subject-selected .sel-badge--on {
+    background: var(--chip-elective-bg, var(--accent-weak));
+    color: var(--chip-elective-fg, var(--accent));
+}
+.exam-card.subject-dimmed .sel-badge--off {
+    background: var(--chip-special-bg, var(--bg-soft));
+    color: var(--chip-special-fg, var(--text-3));
+}
+.sel-badge--on { color: var(--chip-elective-fg, var(--accent)); }
+.sel-badge--off { color: var(--chip-special-fg, var(--text-3)); }
+/* 淡化卡整体降透明度，徽章跟着走即可，不要再叠一层自身透明度 */
+.exam-card.subject-dimmed .sel-badge { opacity: 1; }
+
+/* 阶段详情里那排数字方块同样收成直角，与卡片的 2px 语言一致 */
+.pd-timer .num,
+.pd-countdown .num {
+    border-radius: var(--r-sharp);
+}
+
+/* ---------- Hero 内的阶段名与状态徽章（非高考阶段） ---------- */
+/* 只在非高考阶段出现；高考阶段隐藏，避免与「距高考还有」重复。 */
+.hero-phase-line {
+    display: none;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px 10px;
+    margin: 2px 0 4px;
+}
+.hero-phase-line.show { display: flex; }
+.hero-phase-name {
+    font-size: clamp(1rem, 4.4cqw, 1.35rem);
+    font-weight: 800;
+    letter-spacing: .04em;
+    color: var(--hero-fg);
+    line-height: 1.15;
+}
+/* 徽章在实色 Hero 上必须走 Hero 的前景色，
+   否则浅色弱底浅字压在橙底/深底上会糊掉。 */
+.hero-countdown .pd-status-badge {
+    background: rgba(255,255,255,.55);
+    color: var(--hero-fg);
+    border: 0;
+    font-size: .68rem;
+    font-weight: 700;
+    padding: 2px 9px;
+    border-radius: var(--r-sharp);
+}
+html[data-theme="night"] .hero-countdown .pd-status-badge {
+    background: rgba(255,255,255,.10);
+    color: var(--text, #E6EDF3);
+}
+
+/* ============================================================
+   v2.3.2 · 设置弹窗对齐 preview 的卡片语言
+   ------------------------------------------------------------
+   原先这一块是 v2.0 时代的样子，明显比页面其他地方「旧一代」：
+     · 标题是居中的 1.1rem，而全站卡片页眉是「小字 + 宽字距 + 左侧色条」
+     · 日期选择器是一枚空描边方框，没有「当前值 / 可点」的视觉暗示
+     · 没有分节，五组日期连成一坨
+   现在统一到：卡内页眉 + 分节行 + 直角控件 + 1.5px 描边 + 硬阴影。
+   ============================================================ */
+.settings-modal {
+    border-radius: var(--r-card);
+    border: var(--bd) solid var(--border);
+    box-shadow: var(--shadow-lift);
+    padding: 0;
+    overflow: hidden;
+    /* 页眉与动作区固定，只有中间的表单滚动 ——
+       原先整卡滚动，实测内容高 934px > 可视 798px，
+       「取消 / 保存」被推到折叠线以下，用户看不到按钮。 */
+    display: flex;
+    flex-direction: column;
+    max-height: 88vh;
+}
+.sm-title {
+    text-align: left;
+    font-size: .82rem;
+    font-weight: 800;
+    letter-spacing: 2.4px;
+    color: var(--text);
+    padding: 14px 20px 12px;
+    border-bottom: var(--bd) solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: none;
+}
+/* 标题左侧的强调色竖条：与 .card-title / .rail-head .rt 同一套语言 */
+.sm-title::before {
+    content: '';
+    width: 4px; height: 13px;
+    background: var(--accent);
+    border-radius: var(--r-sharp);
+    flex: none;
+}
+.sm-sub {
+    font-size: .7rem;
+    color: var(--text-3);
+    letter-spacing: .4px;
+    padding: 10px 20px 0;
+    text-align: left;
+    flex: none;
+}
+/* 只有这一段滚动 */
+#settingsForm {
+    padding: 4px 20px 0;
+    overflow-y: auto;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+/* 分节：底部一条极淡分隔线，替代原先的一片空白 */
+.sm-phase {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+}
+.sm-phase:last-of-type { border-bottom: 0; }
+.sm-phase-name {
+    font-size: .74rem;
+    font-weight: 800;
+    letter-spacing: 1.6px;
+    color: var(--text-2);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+.sm-note {
+    font-size: .62rem;
+    font-weight: 600;
+    letter-spacing: 0;
+    color: var(--text-3);
+}
+
+/* 日期行：开始 / 结束 各占一行，与 JS 生成的
+   <div class="sm-date-row" style="margin-bottom:6px;"> 结构一致。
+   注意不要写成两列网格 —— #settingsForm 在 JS 里带内联样式，
+   又不受 CSS 变量影响，实测两列会把两个字段并排挤在一起。 */
+.sm-date-row {
+    display: block;
+    margin-bottom: 6px;
+}
+.sm-date-row:last-child { margin-bottom: 0; }
+
+/* 日期选择器：直角控件 + 当前值 + 下拉箭头 */
+.dp-trigger {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 9px 12px;
+    background: var(--bg-card);
+    border: var(--bd) solid var(--border-strong);
+    border-radius: var(--r-btn);
+    cursor: pointer;
+    transition: var(--tr);
+    min-width: 0;
+}
+.dp-trigger:hover,
+.dp-trigger:focus-visible {
+    border-color: var(--accent);
+    outline: none;
+}
+.dp-trigger.active {
+    border-color: var(--accent);
+    background: var(--accent-weak);
+}
+.dp-label {
+    flex: none;
+    font-size: .62rem;
+    font-weight: 700;
+    letter-spacing: 1.4px;
+    color: var(--text-3);
+}
+.dp-value {
+    flex: 1;
+    min-width: 0;
+    font-family: var(--font-mono);
+    font-size: .78rem;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.dp-arrow { flex: none; color: var(--text-3); font-size: .7rem; }
+
+@media (max-width: 560px) {
+    .sm-title { padding: 12px 16px 10px; }
+    .sm-sub { padding: 8px 16px 0; }
+    #settingsForm { padding: 4px 16px 0; }
+    .sm-actions { padding: 12px 16px 0; }
+}
+
+/* 弹窗底部动作区：固定在可视区内，随表单滚动一起消失的问题不再出现 */
+.sm-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    padding: 14px 20px 18px;
+    border-top: var(--bd) solid var(--border);
+    margin-top: 0;
+    flex: none;
+}
+.sm-btn {
+    border-radius: var(--r-btn);
+    font-weight: 700;
+    letter-spacing: .5px;
+    padding: 10px 14px;
+    font-size: .8rem;
+    cursor: pointer;
+    transition: var(--tr);
+    border: var(--bd) solid transparent;
+}
+.sm-btn-secondary {
+    background: var(--bg-card);
+    color: var(--text-2);
+    border-color: var(--border-strong);
+}
+.sm-btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+.sm-btn-primary {
+    background: var(--accent);
+    color: var(--accent-text);
+    border-color: transparent;
+}
+.sm-btn-primary:hover { filter: brightness(1.06); }
+/* 「恢复默认」是次要动作：不做成主按钮，也不抢视觉 */
+.sm-reset-btn {
+    appearance: none;
+    font: inherit;
+    cursor: pointer;
+    background: transparent;
+    border: 0;
+    color: var(--text-3);
+    font-size: .72rem;
+    letter-spacing: 1px;
+    padding: 8px 10px;
+    border-radius: var(--r-btn);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-color: var(--border-strong);
+}
+.sm-reset-btn:hover { color: var(--accent); text-decoration-color: var(--accent); }
+
+/* ---------- 骨架屏微光：改用主题前景色，不再写死白色 ---------- */
+/* 原实现写死 rgba(255,255,255,.25)，在浅色主题上等于一块白光；
+   而唯一的深色覆盖用的是 [data-theme="dark"] —— v2.1 之后的主题名是
+   ink/night/board/celadon/camp，那条规则永不命中，
+   于是夜间主题的骨架屏也是一片白光。
+   改用 currentColor + 不透明度：任何主题下都自然合理。 */
+.skeleton .sk-block::after,
+.skeleton .sk-line::after,
+.skeleton .sk-bar::after,
+.skeleton .sk-pill::after {
+    background: linear-gradient(90deg,
+        transparent 0%,
+        currentColor 50%,
+        transparent 100%);
+    opacity: .12;
+}
+html[data-theme="night"] .skeleton .sk-block::after,
+html[data-theme="night"] .skeleton .sk-line::after,
+html[data-theme="night"] .skeleton .sk-bar::after,
+html[data-theme="night"] .skeleton .sk-pill::after {
+    opacity: .07;
+}
+
+/* ---------- 速览弹窗的时间线 ---------- */
+.hm-upcoming { margin-top: 14px; }
+.hm-upcoming .hm-item:last-child { border-bottom: 0; }
+.hm-upcoming .hm-item-name .hm-item-tag { margin-left: 8px; }
+
+/* ---------- 全屏根节点：直接吃主题 token ---------- */
+.fs-overlay {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+}
+
+/* 当前场次一行 */
+.fs-head-line {
+    display: flex; align-items: baseline; justify-content: center;
+    flex-wrap: wrap; gap: 4px 14px;
+    flex-shrink: 0;
+    margin-bottom: 2.2vh;
+}
+.fs-current-label {
+    font-size: .72rem; letter-spacing: 2.4px;
+    color: var(--text-3); margin: 0;
+}
+/* 名称去掉旧的巨型字号：它不再和倒计时抢视觉焦点 */
+.fs-current-name {
+    font-size: clamp(1.1rem, 2.6vh, 1.7rem);
+    font-weight: 800; letter-spacing: .06em;
+    color: var(--text); margin: 0; line-height: 1.1;
+}
+.fs-current-time {
+    font-family: var(--font-mono);
+    font-size: .82rem; letter-spacing: 1px;
+    color: var(--text-3); margin: 0;
+}
+/* 等待/进行/完成的配色改走强调色，不再出现写死的 #c8a870 与绿色 */
+.fs-state-waiting .fs-current-name { color: var(--text); }
+
+.fs-header {
+    font-size: .72rem; letter-spacing: 4px;
+    color: var(--text-3); margin-bottom: 1vh;
+}
+
+/* ---------- 数字：大天数 + 次级精确行（demo 的层级） ---------- */
+.fs-timer-wrap {
+    width: 100%; max-width: none;
+    margin-bottom: 2.4vh;
+}
+/* 大数字的说明行：小字、宽字距、次级色，不参与数字的视觉层级 */
+.fs-count-label {
+    text-align: center;
+    font-size: clamp(.68rem, 1.5vh, .82rem);
+    letter-spacing: 3px;
+    color: var(--text-3);
+    margin-bottom: clamp(4px, 1vh, 12px);
+    white-space: nowrap;
+}
+.fs-timer-digits {
+    display: flex; align-items: baseline; justify-content: center;
+    gap: clamp(6px, 1.6vmin, 24px);
+    white-space: nowrap;            /* 数字绝不折行 */
+}
+/* 字号用 min(vw, vh) 双约束：只按 vh 会在窄屏溢出，只按 vw 会在矮屏顶破 */
+.fs-days {
+    font-family: var(--font-display);
+    font-size: min(23vw, 40vh, 20rem);
+    font-weight: 800; line-height: .88;
+    letter-spacing: -.02em;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+.fs-days-unit {
+    font-size: min(5.5vw, 9vh, 4.5rem);
+    font-weight: 700; letter-spacing: .04em;
+    color: var(--text-2);
+    white-space: nowrap;
+}
+.fs-sub {
+    display: flex; align-items: baseline;
+    gap: clamp(4px, 1.2vmin, 16px);
+    margin-top: clamp(6px, 2.2vh, 30px);
+    /* 整行按内容宽度收缩并居中，左侧竖线才会紧贴数字；
+       若让它撑满整宽，justify-content:center 会把内容推到中间，
+       竖线就被甩在容器最左边（实测在 1440 宽下离数字 430px）。 */
+    width: fit-content;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 12px;
+    border-left: 3px solid var(--accent);
+    font-family: var(--font-mono);
+    font-size: min(4.2vw, 7vh, 3.4rem);
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+.fs-sub-item { display: inline-flex; align-items: baseline; gap: 2px; }
+.fs-sub-item b { font-weight: 800; }
+.fs-sub-item .u2 { font-size: .45em; opacity: .7; margin-left: 2px; font-family: var(--font-sans); }
+.fs-sub-sep { opacity: .45; }
+
+/* ---------- 进度条 ---------- */
+.fs-progress-wrap { width: 100%; max-width: 860px; margin-bottom: 2vh; }
+.fs-progress-bar { height: 5px; border-radius: var(--r-sharp); background: var(--bg-soft); }
+.fs-progress-fill {
+    border-radius: var(--r-sharp);
+    background: var(--accent);
+}
+.fs-progress-label { font-family: var(--font-mono); color: var(--text-3); font-size: .66rem; }
+
+/* ---------- 底部信息条（取代旧的「下一场」卡片 + 「概要」两行） ---------- */
+.fs-foot {
+    display: flex; align-items: baseline; justify-content: center;
+    flex-wrap: wrap;
+    gap: clamp(14px, 5vw, 80px);
+    width: 100%;
+    padding: 0 clamp(16px, 5vw, 80px);
+    margin-bottom: 0;
+    background: transparent; border: 0; box-shadow: none;
+    font-size: clamp(.78rem, 2.2vh, 1.05rem);
+    color: var(--text-2);
+}
+.fs-foot .fs-foot-i { display: inline-flex; align-items: baseline; gap: 8px; }
+.fs-foot .fs-foot-l { font-size: .62em; letter-spacing: 2px; color: var(--text-3); }
+.fs-foot b { color: var(--text); font-weight: 800; }
+.fs-foot .fs-foot-t { color: var(--text-2); }
+.fs-foot .fs-foot-c {
+    font-family: var(--font-mono);
+    color: var(--accent); font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+/* 状态条复用 pill 语言（直角方点），与预览中的 .pill 一致 */
+.fs-status-bar { margin-bottom: 1.6vh; }
+.fs-status-bar .fs-status-dot {
+    width: 6px; height: 6px; border-radius: var(--r-sharp);
+    background: currentColor;
+}
+.fs-status-text { font-size: .72rem; letter-spacing: .4px; font-weight: 600; }
+.fs-status-bar.status-waiting .fs-status-dot { background: currentColor; animation: none; }
+.fs-status-bar.status-waiting .fs-status-text { color: var(--accent); }
+.fs-status-bar.status-ongoing .fs-status-dot { background: currentColor; }
+.fs-status-bar.status-ongoing .fs-status-text { color: var(--accent); }
+.fs-status-bar.status-done .fs-status-dot { background: currentColor; animation: none; }
+.fs-status-bar.status-done .fs-status-text { color: var(--text-3); }
+
+/* 退出按钮：与卡片按钮同一套直角语言 */
+.fs-exit {
+    background: var(--bg-card);
+    color: var(--text-2);
+    border: var(--bd) solid var(--border-strong);
+    border-radius: var(--r-btn);
+    font-weight: 700;
+}
+.fs-exit:hover { border-color: var(--accent); color: var(--accent); background: var(--bg-card); }
+
+/* 矮屏与窄屏：收紧留白，字号已被 min() 约束 */
+@media (max-width: 600px), (max-height: 560px) {
+    .fs-inner { padding: 16px 4vw; }
+    .fs-header { display: none; }
+    .fs-head-line { margin-bottom: 1.2vh; }
+    .fs-sub { margin-top: 1.2vh; }
+    .fs-foot { flex-direction: column; align-items: center; gap: 6px; padding: 0 4vw; }
+}
+/* 矮横屏：把标签/数字/精确行并排，用横向空间换垂直空间 */
+@media (orientation: landscape) and (max-height: 620px) {
+    .fs-timer-wrap {
+        display: flex; align-items: center; justify-content: center;
+        flex-wrap: nowrap; gap: clamp(12px, 3vw, 44px);
+    }
+    .fs-timer-digits { order: 1; }
+    .fs-sub {
+        order: 2; flex-direction: column; align-items: flex-start;
+        gap: 2px; margin-top: 0;
+        font-size: min(3vw, 8vh, 2rem);
+    }
+}

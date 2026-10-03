@@ -1,0 +1,307 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-10-03",
+  "note": "二十四节气。2026 全年、2027 全年、2028 年 1 月为官方公布值，时刻为北京时间（UTC+8），精确到分，confirmed=true。官方尚未公布的年份由 lunar.js 的 SOLAR_TERM_APPROX 近似推算，只给日期不给时刻，界面不显示未经核对的分钟数。每年官方节气表发布后，把对应年份补进本文件并把 confirmed 置为 true、更新 updatedAt。本文件会整体替换 lunar.js 里的同名单表；留空或格式非法时静默保留内置表，页面任何时刻都有节气数据。",
+  "terms": [
+    {
+      "date": "2026-01-05",
+      "name": "小寒",
+      "time": "16:23",
+      "confirmed": true
+    },
+    {
+      "date": "2026-01-20",
+      "name": "大寒",
+      "time": "09:45",
+      "confirmed": true
+    },
+    {
+      "date": "2026-02-04",
+      "name": "立春",
+      "time": "04:02",
+      "confirmed": true
+    },
+    {
+      "date": "2026-02-18",
+      "name": "雨水",
+      "time": "23:52",
+      "confirmed": true
+    },
+    {
+      "date": "2026-03-05",
+      "name": "惊蛰",
+      "time": "21:59",
+      "confirmed": true
+    },
+    {
+      "date": "2026-03-20",
+      "name": "春分",
+      "time": "22:46",
+      "confirmed": true
+    },
+    {
+      "date": "2026-04-05",
+      "name": "清明",
+      "time": "02:40",
+      "confirmed": true
+    },
+    {
+      "date": "2026-04-20",
+      "name": "谷雨",
+      "time": "09:39",
+      "confirmed": true
+    },
+    {
+      "date": "2026-05-05",
+      "name": "立夏",
+      "time": "19:49",
+      "confirmed": true
+    },
+    {
+      "date": "2026-05-21",
+      "name": "小满",
+      "time": "08:37",
+      "confirmed": true
+    },
+    {
+      "date": "2026-06-05",
+      "name": "芒种",
+      "time": "23:48",
+      "confirmed": true
+    },
+    {
+      "date": "2026-06-21",
+      "name": "夏至",
+      "time": "16:25",
+      "confirmed": true
+    },
+    {
+      "date": "2026-07-07",
+      "name": "小暑",
+      "time": "09:57",
+      "confirmed": true
+    },
+    {
+      "date": "2026-07-23",
+      "name": "大暑",
+      "time": "03:13",
+      "confirmed": true
+    },
+    {
+      "date": "2026-08-07",
+      "name": "立秋",
+      "time": "19:43",
+      "confirmed": true
+    },
+    {
+      "date": "2026-08-23",
+      "name": "处暑",
+      "time": "10:19",
+      "confirmed": true
+    },
+    {
+      "date": "2026-09-07",
+      "name": "白露",
+      "time": "22:41",
+      "confirmed": true
+    },
+    {
+      "date": "2026-09-23",
+      "name": "秋分",
+      "time": "08:05",
+      "confirmed": true
+    },
+    {
+      "date": "2026-10-08",
+      "name": "寒露",
+      "time": "14:29",
+      "confirmed": true
+    },
+    {
+      "date": "2026-10-23",
+      "name": "霜降",
+      "time": "17:38",
+      "confirmed": true
+    },
+    {
+      "date": "2026-11-07",
+      "name": "立冬",
+      "time": "17:52",
+      "confirmed": true
+    },
+    {
+      "date": "2026-11-22",
+      "name": "小雪",
+      "time": "15:23",
+      "confirmed": true
+    },
+    {
+      "date": "2026-12-07",
+      "name": "大雪",
+      "time": "10:53",
+      "confirmed": true
+    },
+    {
+      "date": "2026-12-22",
+      "name": "冬至",
+      "time": "04:50",
+      "confirmed": true
+    },
+    {
+      "date": "2027-01-05",
+      "name": "小寒",
+      "time": "04:21",
+      "confirmed": true
+    },
+    {
+      "date": "2027-01-20",
+      "name": "大寒",
+      "time": "21:47",
+      "confirmed": true
+    },
+    {
+      "date": "2027-02-04",
+      "name": "立春",
+      "time": "09:46",
+      "confirmed": true
+    },
+    {
+      "date": "2027-02-19",
+      "name": "雨水",
+      "time": "05:33",
+      "confirmed": true
+    },
+    {
+      "date": "2027-03-06",
+      "name": "惊蛰",
+      "time": "03:39",
+      "confirmed": true
+    },
+    {
+      "date": "2027-03-21",
+      "name": "春分",
+      "time": "04:24",
+      "confirmed": true
+    },
+    {
+      "date": "2027-04-05",
+      "name": "清明",
+      "time": "08:17",
+      "confirmed": true
+    },
+    {
+      "date": "2027-04-20",
+      "name": "谷雨",
+      "time": "15:17",
+      "confirmed": true
+    },
+    {
+      "date": "2027-05-06",
+      "name": "立夏",
+      "time": "01:24",
+      "confirmed": true
+    },
+    {
+      "date": "2027-05-21",
+      "name": "小满",
+      "time": "14:17",
+      "confirmed": true
+    },
+    {
+      "date": "2027-06-06",
+      "name": "芒种",
+      "time": "05:25",
+      "confirmed": true
+    },
+    {
+      "date": "2027-06-21",
+      "name": "夏至",
+      "time": "22:10",
+      "confirmed": true
+    },
+    {
+      "date": "2027-07-07",
+      "name": "小暑",
+      "time": "15:36",
+      "confirmed": true
+    },
+    {
+      "date": "2027-07-23",
+      "name": "大暑",
+      "time": "09:04",
+      "confirmed": true
+    },
+    {
+      "date": "2027-08-08",
+      "name": "立秋",
+      "time": "01:26",
+      "confirmed": true
+    },
+    {
+      "date": "2027-08-23",
+      "name": "处暑",
+      "time": "16:13",
+      "confirmed": true
+    },
+    {
+      "date": "2027-09-08",
+      "name": "白露",
+      "time": "04:28",
+      "confirmed": true
+    },
+    {
+      "date": "2027-09-23",
+      "name": "秋分",
+      "time": "14:01",
+      "confirmed": true
+    },
+    {
+      "date": "2027-10-08",
+      "name": "寒露",
+      "time": "20:16",
+      "confirmed": true
+    },
+    {
+      "date": "2027-10-23",
+      "name": "霜降",
+      "time": "23:32",
+      "confirmed": true
+    },
+    {
+      "date": "2027-11-07",
+      "name": "立冬",
+      "time": "23:38",
+      "confirmed": true
+    },
+    {
+      "date": "2027-11-22",
+      "name": "小雪",
+      "time": "21:15",
+      "confirmed": true
+    },
+    {
+      "date": "2027-12-07",
+      "name": "大雪",
+      "time": "16:37",
+      "confirmed": true
+    },
+    {
+      "date": "2027-12-22",
+      "name": "冬至",
+      "time": "10:41",
+      "confirmed": true
+    },
+    {
+      "date": "2028-01-06",
+      "name": "小寒",
+      "time": "03:52",
+      "confirmed": true
+    },
+    {
+      "date": "2028-01-20",
+      "name": "大寒",
+      "time": "15:29",
+      "confirmed": true
+    }
+  ]
+}

@@ -86,55 +86,100 @@
         </div>
     </div>
 
-    <!-- ===== v2.0.0 阶段导航（由 JS 填充） ===== -->
-    <div class="phase-nav" id="phaseNav" role="group" aria-label="考试阶段切换"></div>
+    <!-- ===== v2.3.0 阶段轨道：全宽横跨，与 demo 的 .rail 对齐 =====
+         刻意放在两栏之外：demo 里页头与轨道都是整宽元素，
+         两栏只承载「总览」与「高考专属内容」。
+         #phaseNav 只是被移动，id 未变，cacheDom() 依然有效。 -->
+    <section class="rail" id="pgRail" aria-label="考试阶段">
+        <div class="rail-head">
+            <span class="rt">考试阶段</span>
+            <span class="rh">
+                <span class="status-msg" id="statusMsg" role="status">高考进行中 · 沉着冷静</span>
+                <span id="railMode">当前：高考</span>
+                <!-- 「回到当前阶段」：只在查看**已结束**阶段时出现。
+                     二诊/三诊/高考都在未来，对它们说「回到当前阶段」没有意义。 -->
+                <button class="rail-back" type="button" id="railBack" hidden>↩ 回到当前阶段</button>
+            </span>
+        </div>
+        <!-- ===== v2.0.0 阶段导航（由 JS 填充） ===== -->
+        <div class="phase-nav" id="phaseNav" role="group" aria-label="考试阶段切换"></div>
+    </section>
 
-    <!-- 状态横幅 -->
-    <div class="status-msg" id="statusMsg" role="status">高考进行中 · 沉着冷静</div>
+    <!-- ===== v2.2.0 双栏布局：左栏（总倒计时 + 阶段详情） =====
+         桌面端左栏吸附，右栏滚动；窄屏自动退化为单列。
+         注意：这里只做「包装」，不移动任何既有节点，
+         所有 id 仍在原文档流位置，cacheDom() 不会拿到 null。 -->
+    <div class="pg-col-left" id="pgColLeft">
 
     <!-- 总体倒计时 -->
     <div class="hero-countdown" id="heroSection">
         <div class="label" id="heroLabel">距高考还有</div>
-        <div class="timer" id="heroTimer" role="timer" aria-live="off">
-            <div><span class="num" id="hDays">--</span><span class="unit">天</span></div>
-            <span class="sep">:</span>
-            <div><span class="num" id="hHours">--</span><span class="unit">时</span></div>
-            <span class="sep">:</span>
-            <div><span class="num" id="hMins">--</span><span class="unit">分</span></div>
-            <span class="sep">:</span>
-            <div><span class="num" id="hSecs">--</span><span class="unit">秒</span></div>
+        <!-- 非高考阶段：阶段全名 + 状态徽章。与 Hero 共用同一个倒计时，
+             不再另起一张卡片（那会造成两个一模一样的倒计时并排）。 -->
+        <div class="hero-phase-line" id="heroPhaseLine">
+            <span class="hero-phase-name" id="heroPhaseName">—</span>
+            <span class="pd-status-badge" id="heroPhaseBadge">即将开始</span>
         </div>
+        <!-- 目标日期一行（对齐 demo 的 .h-date；由 JS 填写） -->
+        <div class="h-date" id="heroDate"></div>
+        <div class="timer" id="heroTimer" role="timer" aria-live="off">
+            <!-- 天数为视觉主体，时分秒次级。
+                 刻意不用「四块并排」：放大后四块会互相挤压重叠。 -->
+            <div class="t-main">
+                <span class="num" id="hDays">--</span><span class="unit">天</span>
+            </div>
+            <div class="t-rest">
+                <span class="t-item"><span class="num" id="hHours">--</span><span class="unit">时</span></span>
+                <span class="sep">:</span>
+                <span class="t-item"><span class="num" id="hMins">--</span><span class="unit">分</span></span>
+                <span class="sep">:</span>
+                <span class="t-item"><span class="num" id="hSecs">--</span><span class="unit">秒</span></span>
+            </div>
+        </div>
+        <!-- 状态条：与 demo 的 .stat-row 对齐（由 JS 填写） -->
+        <div class="stat-row" id="heroStats"></div>
         <!-- 供读屏使用：每分钟更新一次，避免每秒播报 -->
         <span class="sr-only" id="heroA11y" aria-live="polite" aria-atomic="true"></span>
     </div>
 
-    <!-- ===== v2.0.0 阶段详情（非高考） ===== -->
-    <div class="phase-detail" id="phaseDetail">
-        <div class="pd-header">
-            <div class="pd-name" id="pdName">一诊</div>
-            <div class="pd-date-range" id="pdDateRange">2026年12月22日 - 12月24日</div>
+    <!-- ===== v2.3.0 下一个假期：与 demo 左栏一致，常驻首页 =====
+         数据源与「假期」弹窗完全相同（time.js 的 getHolidayRuns），
+         由 renderHoliday() 一并填充，不存在两套数据。 -->
+    <section class="card pg-card pg-card--solid" id="holidayCard">
+        <div class="card-band">
+            <span>下一个假期</span>
+            <button class="cb-act" type="button" id="holidayCardBtn">日历 ›</button>
         </div>
-        <div class="pd-status-wrap">
-            <span class="pd-status-badge" id="pdBadge">即将开始</span>
-        </div>
-        <div class="pd-countdown">
-            <div class="pd-timer">
-                <div><span class="num" id="pdDays">--</span><span class="unit">天</span></div>
-                <span class="sep">:</span>
-                <div><span class="num" id="pdHours">--</span><span class="unit">时</span></div>
-                <span class="sep">:</span>
-                <div><span class="num" id="pdMins">--</span><span class="unit">分</span></div>
-                <span class="sep">:</span>
-                <div><span class="num" id="pdSecs">--</span><span class="unit">秒</span></div>
+        <div class="next-hol">
+            <div class="nh-l">
+                <span class="nh-icon" aria-hidden="true">假</span>
+                <div>
+                    <div class="nh-name" id="nhName">—</div>
+                    <div class="nh-meta" id="nhMeta">—</div>
+                </div>
+            </div>
+            <div class="nh-r">
+                <div class="nh-days"><span id="nhDays">--</span><small id="nhUnit">天</small></div>
             </div>
         </div>
-        <div class="pd-desc" id="pdDesc">距开考还有</div>
-    </div>
+        <div class="nh-strip" id="nhStrip"></div>
+    </section>
+
+    <!-- ===== v2.3.2 阶段专有信息并入 Hero =====
+         原先这里是一张独立的「阶段详情」卡片，里面有自己的一整套
+         天/时/分/秒方块 —— 而 Hero 已经在数同一件事，于是非高考阶段
+         页面上并排出现两个一模一样的倒计时。
+         现在只保留 Hero 一处倒计时：阶段全名与状态徽章作为 Hero 内的
+         补充信息（见上方 #heroPhaseName / #heroPhaseBadge）。 -->
+    </div><!-- /pg-col-left -->
+
+    <!-- ===== v2.2.0 双栏布局：右栏（高考专属内容：进程 / 选科 / 日程） ===== -->
+    <div class="pg-col-right" id="pgColRight">
 
     <!-- ===== 高考内容 ===== -->
     <div class="gaokao-content" id="gaokaoContent">
-    <!-- 当前考试进程 -->
-    <div class="current-exam" id="currentExam">
+    <!-- 当前考试进程：实色卡（露营=草绿，其他主题=极淡信息色） -->
+    <div class="current-exam pg-card pg-card--solid" id="currentExam">
         <div class="ce-header">
             <span class="ce-label" id="ceLabel">当前考试</span>
             <span class="ce-status-badge ce-ongoing" id="ceBadge">进行中</span>
@@ -175,28 +220,101 @@
             <button type="button" class="ss-option" data-subject="生物学" aria-pressed="false" aria-describedby="ssLabelSecondary">生物学</button>
         </div>
     </fieldset>
-
-    <!-- 日程标题 -->
-    <div class="section-title">考试日程</div>
-
-    <!-- 日程容器 -->
-    <div id="scheduleRoot"></div>
     </div><!-- /gaokaoContent -->
+
+    <!-- ===== v2.3.0 日历常驻卡（对齐 demo 右栏的「日历 · 节假日」） =====
+         刻意放在 #gaokaoContent 之外：假期与诊断阶段无关，
+         切到「一诊」等阶段时不应跟着一起消失。
+         弹窗（#holidayModal）退化为「未来假期速览」，
+         与这张月历卡分工不同，不会出现两套同样内容。 -->
+    <section class="pg-card pg-card--tinted card--notch" id="calCard">
+        <div class="card-band">
+            <span>日历 · 节假日</span>
+            <span class="cb-note" id="calTodayNote">今天</span>
+        </div>
+
+        <!-- 下一个假期：与左栏卡片同源，由 renderHoliday() 双写 -->
+        <div class="card-next-hol">
+            <span class="nh-icon" aria-hidden="true">假</span>
+            <div class="cnh-main">
+                <div class="cnh-name" id="nhcName">—</div>
+                <div class="cnh-meta" id="nhcMeta">—</div>
+            </div>
+            <div class="cnh-days"><span id="nhcDays">--</span><small id="nhcUnit">天</small></div>
+        </div>
+
+        <div class="hm-tabs" id="hmTabs" role="tablist" aria-label="选择月份"></div>
+        <div class="hm-grid" id="hmGrid" role="grid" aria-label="节假日月历"></div>
+
+        <div class="hm-legend">
+            <span><i class="h"></i>法定放假</span>
+            <span><i class="w"></i>调休上班</span>
+            <span><i class="t"></i>今天</span>
+            <span><i class="e"></i>预估（未公布）</span>
+            <span><i class="s"></i>节气</span>
+        </div>
+
+        <div class="hm-list" id="hmList"></div>
+    </section>
+
+    <!-- ===== v2.2.0 日程卡：把裸着的日程列表包进卡片，与其他区块一致 ===== -->
+    <section class="pg-card card--notch" id="scheduleCard">
+        <div class="card-band">
+            <span>考试日程</span>
+            <span class="cb-note" id="scheduleBandNote">9 场 · 4 天</span>
+        </div>
+        <!-- 日程容器（保持原 id，gaokao.js 的 render() 依赖它） -->
+        <div id="scheduleRoot"></div>
+    </section>
+    </div><!-- /pg-col-right -->
 
     <!-- 底部 -->
     <div class="footer">
         <span>金榜题名 · 前程似锦</span>
-        <span class="footer-version">v<span id="versionLabel">2.0.2</span></span>
+        <span class="footer-version">v<span id="versionLabel">2.5.2</span></span>
     </div>
     </div><!-- /main-content -->
 
     <!-- 底部操作栏 -->
     <div class="action-bar">
-        <button class="action-btn action-btn-secondary" id="themeToggle" title="切换主题" aria-pressed="false">浅色 →</button>
+        <button class="action-btn action-btn-secondary" id="themeToggle" title="外观设置" aria-expanded="false" aria-haspopup="dialog">主题 · 砚台</button>
+        <button class="action-btn action-btn-secondary" id="holidayBtn" title="节假日日历" aria-haspopup="dialog">假期</button>
         <button class="action-btn action-btn-secondary" id="pipToggle" title="浮动小窗">小窗</button>
         <button class="action-btn action-btn-secondary" id="installBtn" title="安装到桌面" style="display:none;">安装</button>
         <button class="action-btn action-btn-secondary" id="settingsBtn" title="考试日程设置">设置</button>
         <button class="action-btn" id="fsToggle" title="全屏显示">全屏</button>
+    </div>
+
+    <!-- ===== v2.1.0 外观菜单（配色 / 字号 / 明暗，由 gaokao.js 填充） ===== -->
+    <div class="theme-menu" id="themeMenu" role="dialog" aria-label="外观设置" aria-hidden="true"></div>
+
+    <!-- ===== v2.3.0 未来假期速览（原「节假日日历」弹窗） =====
+         月历已常驻右栏，这里改为「以后几个月还有什么假」的速览：
+         只列下一个假期 + 后续假期时间线，不再重复一份月历。 -->
+    <div class="modal-overlay" id="holidayModal" role="dialog" aria-modal="true"
+         aria-labelledby="hmTitle" aria-hidden="true">
+        <div class="holiday-modal">
+            <div class="hm-head">
+                <div>
+                    <div class="hm-title" id="hmTitle">未来假期速览</div>
+                    <div class="hm-sub" id="hmSub">接下来几个月的放假安排</div>
+                </div>
+                <button class="hm-close" id="holidayClose" type="button" aria-label="关闭">✕</button>
+            </div>
+
+            <!-- 下一个假期 -->
+            <div class="hm-next" id="hmNext">
+                <span class="hm-next-icon" aria-hidden="true">假</span>
+                <div class="hm-next-main">
+                    <div class="hm-next-name" id="hmNextName">—</div>
+                    <div class="hm-next-meta" id="hmNextMeta">—</div>
+                </div>
+                <div class="hm-next-days"><span id="hmNextDays">--</span><small id="hmNextUnit">天</small></div>
+            </div>
+
+            <!-- 之后几个假期的时间线 -->
+            <div class="hm-upcoming" id="hmUpcoming"></div>
+        </div>
     </div>
 
     <!-- ===== 全屏显示覆盖层 ===== -->
@@ -211,19 +329,30 @@
             </div>
 
             <div class="fs-main">
-                <div class="fs-current-label" id="fsCurLabel">当前考试</div>
-                <div class="fs-current-name" id="fsCurName">—</div>
-                <div class="fs-current-time" id="fsCurTime">--:--</div>
+                <!-- 当前场次做成一行：标签 / 名称 / 时间，
+                     原先是三行堆叠，占掉了大数字需要的垂直空间 -->
+                <div class="fs-head-line">
+                    <span class="fs-current-label" id="fsCurLabel">当前考试</span>
+                    <span class="fs-current-name" id="fsCurName">—</span>
+                    <span class="fs-current-time" id="fsCurTime">--:--</span>
+                </div>
 
+                <!-- 大天数 + 次级精确行：与 demo 展示模式的数字层级一致。
+                     刻意不用「四块等宽并排」—— 那会让天数与时分秒抢同一层级，
+                     放大后反而不成比例。 -->
                 <div class="fs-timer-wrap">
+                    <!-- 说明大数字在数到什么：没有这行的话，
+                         「距开考」与下面进度条的「剩余到结束」会被读成同一个数。 -->
+                    <div class="fs-count-label" id="fsCountLabel">距开考还有</div>
                     <div class="fs-timer-digits" id="fsTimerDigits" role="timer" aria-live="off">
-                        <div class="digit-block"><span class="num" id="fsDd">00</span><span class="label">天</span></div>
-                        <span class="digit-sep">·</span>
-                        <div class="digit-block"><span class="num" id="fsDh">00</span><span class="label">时</span></div>
-                        <span class="digit-sep">:</span>
-                        <div class="digit-block"><span class="num" id="fsDm">00</span><span class="label">分</span></div>
-                        <span class="digit-sep">:</span>
-                        <div class="digit-block"><span class="num" id="fsDs">00</span><span class="label">秒</span></div>
+                        <span class="fs-days" id="fsDd">00</span><span class="fs-days-unit">天</span>
+                    </div>
+                    <div class="fs-sub">
+                        <span class="fs-sub-item"><b id="fsDh">00</b><span class="u2">时</span></span>
+                        <span class="fs-sub-sep">:</span>
+                        <span class="fs-sub-item"><b id="fsDm">00</b><span class="u2">分</span></span>
+                        <span class="fs-sub-sep">:</span>
+                        <span class="fs-sub-item"><b id="fsDs">00</b><span class="u2">秒</span></span>
                     </div>
                 </div>
 
@@ -235,17 +364,21 @@
                     </div>
                 </div>
 
-                <div class="fs-next" id="fsNext">
-                    <span class="fs-next-label">下一场</span>
-                    <span class="fs-next-name" id="fsNextName">—</span>
-                    <span class="fs-next-time" id="fsNextTime">--:-- ~ --:--</span>
-                    <span class="fs-next-countdown" id="fsNextCountdown">--:--:--</span>
+                <!-- 底部信息条：取代原先独立的「下一场」卡片与「概要」两行 -->
+                <div class="fs-foot" id="fsNext">
+                    <span class="fs-foot-i">
+                        <span class="fs-foot-l">下一场</span>
+                        <b id="fsNextName">—</b>
+                        <span class="fs-foot-t" id="fsNextTime">--:-- ~ --:--</span>
+                        <span class="fs-foot-c" id="fsNextCountdown">--:--:--</span>
+                    </span>
+                    <span class="fs-foot-i" id="fsSummary">
+                        <span class="fs-foot-l">进度</span>
+                        <b id="fsDone">0</b>
+                        <span class="fs-foot-t">/ <span id="fsRemain">0</span> 场</span>
+                        <span class="fs-total-hint" id="fsTotalHint"></span>
+                    </span>
                 </div>
-            </div>
-
-            <div class="fs-summary" id="fsSummary">
-                <span>已完成 <strong id="fsDone">0</strong> 场</span>
-                <span>剩余 <strong id="fsRemain">0</strong> 场 <span class="fs-total-hint" id="fsTotalHint"></span></span>
             </div>
         </div>
     </div>
@@ -279,6 +412,8 @@
 </div>
 
 <script src="time.js"></script>
+<!-- 农历与节气：纯函数模块，不碰 DOM；必须早于 gaokao.js -->
+<script src="lunar.js"></script>
 <script src="gaokao.js"></script>
 
 </body>

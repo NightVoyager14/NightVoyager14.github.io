@@ -8,7 +8,7 @@
 
 /* 版本号唯一来源：页脚与 Service Worker 缓存名都从这里取。
    改代码时只需改这一处。 */
-const APP_VERSION = '2.0.3';
+const APP_VERSION = '2.5.2';
 
 // ------------------------------------------------------------
 //  时间基准
@@ -132,8 +132,8 @@ const PHASE_CONFIG = {
     },
     first: {
         id: 'first', name: '一诊', longName: '第一次诊断性考试', short: '一',
-        defaultStart: { year: 2026, month: 12, day: 22 },
-        defaultEnd: { year: 2026, month: 12, day: 24 },
+        defaultStart: { year: 2026, month: 12, day: 21 },
+        defaultEnd: { year: 2026, month: 12, day: 23 },
         desc: '第一次诊断性考试',
     },
     second: {
@@ -175,4 +175,192 @@ function isExamRelevant(ex, selectedSubjects) {
     if (ex.tag !== 'elective') return true;
     const parts = ex.name.split('/').map(s => s.trim());
     return parts.some(p => selectedSubjects.includes(p));
+}
+
+// ------------------------------------------------------------
+//  节假日（v2.2.0）
+//  ------------------------------------------------------------
+//  设计取舍：不运行时请求第三方 API。
+//  原因：法定节假日由国务院办公厅每年发布一次，属「一年一变」的数据；
+//  为它引入运行时网络依赖，会带来可用性耦合、CORS 不确定性、
+//  离线失效与访客 IP 外泄，收益远不及成本。
+//  因此：内置一份数据作为兜底（页面任何时刻都有数据），
+//  再由 gaokao.js 尝试 fetch('./data/holidays.json') 覆盖，
+//  失败则静默保留内置数据。将来若要接 API，只需替换那一个加载器，
+//  UI 与本文件的查询函数都不用动。
+//
+//  kind: 'holiday' 法定放假 | 'workday' 调休上班 | 'tentative' 日期未公布
+//  confirmed: false 表示按农历/惯例预估，界面会标注「预估」
+// ------------------------------------------------------------
+
+const HOLIDAY_FALLBACK = {
+    schemaVersion: 2,
+    days: [
+        // ---------- 2026 年（依国办发明电〔2025〕7 号，全部官方） ----------
+        { date: '2026-01-01', name: '元旦', kind: 'holiday', confirmed: true },
+        { date: '2026-01-02', name: '元旦', kind: 'holiday', confirmed: true },
+        { date: '2026-01-03', name: '元旦', kind: 'holiday', confirmed: true },
+        { date: '2026-01-04', name: '调休上班', kind: 'workday', confirmed: true },
+
+        { date: '2026-02-15', name: '春节', kind: 'holiday', confirmed: true },
+        { date: '2026-02-16', name: '春节', kind: 'holiday', confirmed: true },
+        { date: '2026-02-17', name: '春节', kind: 'holiday', confirmed: true },
+        { date: '2026-02-18', name: '春节', kind: 'holiday', confirmed: true },
+        { date: '2026-02-19', name: '春节', kind: 'holiday', confirmed: true },
+        { date: '2026-02-20', name: '春节', kind: 'holiday', confirmed: true },
+        { date: '2026-02-21', name: '春节', kind: 'holiday', confirmed: true },
+        { date: '2026-02-22', name: '春节', kind: 'holiday', confirmed: true },
+        { date: '2026-02-23', name: '春节', kind: 'holiday', confirmed: true },
+        { date: '2026-02-14', name: '调休上班', kind: 'workday', confirmed: true },
+        { date: '2026-02-28', name: '调休上班', kind: 'workday', confirmed: true },
+
+        { date: '2026-04-04', name: '清明节', kind: 'holiday', confirmed: true },
+        { date: '2026-04-05', name: '清明节', kind: 'holiday', confirmed: true },
+        { date: '2026-04-06', name: '清明节', kind: 'holiday', confirmed: true },
+
+        { date: '2026-05-01', name: '劳动节', kind: 'holiday', confirmed: true },
+        { date: '2026-05-02', name: '劳动节', kind: 'holiday', confirmed: true },
+        { date: '2026-05-03', name: '劳动节', kind: 'holiday', confirmed: true },
+        { date: '2026-05-04', name: '劳动节', kind: 'holiday', confirmed: true },
+        { date: '2026-05-05', name: '劳动节', kind: 'holiday', confirmed: true },
+        { date: '2026-05-09', name: '调休上班', kind: 'workday', confirmed: true },
+
+        { date: '2026-06-19', name: '端午节', kind: 'holiday', confirmed: true },
+        { date: '2026-06-20', name: '端午节', kind: 'holiday', confirmed: true },
+        { date: '2026-06-21', name: '端午节', kind: 'holiday', confirmed: true },
+
+        { date: '2026-09-25', name: '中秋节', kind: 'holiday', confirmed: true },
+        { date: '2026-09-26', name: '中秋节', kind: 'holiday', confirmed: true },
+        { date: '2026-09-27', name: '中秋节', kind: 'holiday', confirmed: true },
+        { date: '2026-09-20', name: '调休上班', kind: 'workday', confirmed: true },
+
+        { date: '2026-10-01', name: '国庆节', kind: 'holiday', confirmed: true },
+        { date: '2026-10-02', name: '国庆节', kind: 'holiday', confirmed: true },
+        { date: '2026-10-03', name: '国庆节', kind: 'holiday', confirmed: true },
+        { date: '2026-10-04', name: '国庆节', kind: 'holiday', confirmed: true },
+        { date: '2026-10-05', name: '国庆节', kind: 'holiday', confirmed: true },
+        { date: '2026-10-06', name: '国庆节', kind: 'holiday', confirmed: true },
+        { date: '2026-10-07', name: '国庆节', kind: 'holiday', confirmed: true },
+        { date: '2026-10-10', name: '调休上班', kind: 'workday', confirmed: true },
+
+        // ---------- 2027 年（官方未公布，按农历与惯例预估） ----------
+        { date: '2027-01-01', name: '元旦', kind: 'holiday', confirmed: true },
+        { date: '2027-01-02', name: '元旦', kind: 'holiday', confirmed: false },
+        { date: '2027-01-03', name: '元旦', kind: 'holiday', confirmed: false },
+
+        { date: '2027-02-05', name: '春节', kind: 'holiday', confirmed: false },
+        { date: '2027-02-06', name: '春节', kind: 'holiday', confirmed: false },
+        { date: '2027-02-07', name: '春节', kind: 'holiday', confirmed: false },
+        { date: '2027-02-08', name: '春节', kind: 'holiday', confirmed: false },
+        { date: '2027-02-09', name: '春节', kind: 'holiday', confirmed: false },
+        { date: '2027-02-10', name: '春节', kind: 'holiday', confirmed: false },
+        { date: '2027-02-11', name: '春节', kind: 'holiday', confirmed: false },
+
+        { date: '2027-04-04', name: '清明节', kind: 'holiday', confirmed: false },
+        { date: '2027-04-05', name: '清明节', kind: 'holiday', confirmed: false },
+        { date: '2027-04-06', name: '清明节', kind: 'holiday', confirmed: false },
+
+        { date: '2027-05-01', name: '劳动节', kind: 'holiday', confirmed: true },
+        { date: '2027-05-02', name: '劳动节', kind: 'holiday', confirmed: false },
+        { date: '2027-05-03', name: '劳动节', kind: 'holiday', confirmed: false },
+        { date: '2027-05-04', name: '劳动节', kind: 'holiday', confirmed: false },
+        { date: '2027-05-05', name: '劳动节', kind: 'holiday', confirmed: false },
+
+        { date: '2027-06-09', name: '端午节', kind: 'holiday', confirmed: false },
+        { date: '2027-06-10', name: '端午节', kind: 'holiday', confirmed: false },
+        { date: '2027-06-11', name: '端午节', kind: 'holiday', confirmed: false },
+
+        { date: '2027-09-15', name: '中秋节', kind: 'holiday', confirmed: false },
+        { date: '2027-09-16', name: '中秋节', kind: 'holiday', confirmed: false },
+        { date: '2027-09-17', name: '中秋节', kind: 'holiday', confirmed: false },
+
+        { date: '2027-10-01', name: '国庆节', kind: 'holiday', confirmed: true },
+        { date: '2027-10-02', name: '国庆节', kind: 'holiday', confirmed: false },
+        { date: '2027-10-03', name: '国庆节', kind: 'holiday', confirmed: false },
+        { date: '2027-10-04', name: '国庆节', kind: 'holiday', confirmed: false },
+        { date: '2027-10-05', name: '国庆节', kind: 'holiday', confirmed: false },
+        { date: '2027-10-06', name: '国庆节', kind: 'holiday', confirmed: false },
+        { date: '2027-10-07', name: '国庆节', kind: 'holiday', confirmed: false }
+    ]
+};
+
+/** 当前生效的节假日表（可被异步加载的 JSON 替换） */
+let holidayTable = HOLIDAY_FALLBACK;
+
+/** 日期键：与 cnDayKey 同一套 UTC+8 规则，保证与倒计时同一天 */
+function holidayKey(year, month, day) {
+    return year + '-' + pad2(month) + '-' + pad2(day);
+}
+
+/** 用新数据替换节假日表（字段不合法时忽略，保持兜底数据） */
+function setHolidayData(data) {
+    if (!data || typeof data !== 'object' || !Array.isArray(data.days)) return false;
+    const ok = data.days.every(d => d && typeof d.date === 'string' &&
+        /^\d{4}-\d{2}-\d{2}$/.test(d.date) &&
+        (d.kind === 'holiday' || d.kind === 'workday' || d.kind === 'tentative'));
+    if (!ok) {
+        console.warn('[gaokao] 节假日数据格式不合法，已忽略并保留内置数据');
+        return false;
+    }
+    holidayTable = data;
+    return true;
+}
+
+/** 查某一天的节假日记录，没有则返回 null */
+function getHoliday(dateKey) {
+    for (let i = 0; i < holidayTable.days.length; i++) {
+        if (holidayTable.days[i].date === dateKey) return holidayTable.days[i];
+    }
+    return null;
+}
+
+/** 某月的全部节假日记录（按日期升序） */
+function getMonthHolidays(year, month) {
+    const prefix = year + '-' + pad2(month) + '-';
+    return holidayTable.days
+        .filter(d => d.date.indexOf(prefix) === 0)
+        .sort((a, b) => a.date < b.date ? -1 : 1);
+}
+
+/** 把 'YYYY-MM-DD' 解析为北京时间当天 0 点的日序号。
+    刻意用日序号而不是字符串比较：
+    cnDayKey() 产出的是不补零格式（2026-10-2），
+    而数据文件用补零格式（2026-10-02），字符串比较永远不相等。 */
+function holidayDateNumber(dateStr) {
+    const p = dateStr.split('-').map(Number);
+    return cnDayNumber(bjDate(p[0], p[1], p[2]));
+}
+
+/**
+ * 把同名的连续「放假」日合并成假期段，便于「下一个假期」这类展示。
+ * 返回 [{ name, startKey, endKey, days, confirmed }]
+ */
+function getHolidayRuns() {
+    const runs = [];
+    let cur = null;
+    holidayTable.days
+        .filter(d => d.kind === 'holiday')
+        .slice()
+        .sort((a, b) => holidayDateNumber(a.date) - holidayDateNumber(b.date))
+        .forEach(d => {
+            const n = holidayDateNumber(d.date);
+            const isNext = cur && (n - holidayDateNumber(cur.endKey) === 1);
+            if (cur && cur.name === d.name && isNext) {
+                cur.endKey = d.date;
+                cur.days += 1;
+                if (d.confirmed === false) cur.confirmed = false;
+            } else {
+                cur = {
+                    name: d.name, startKey: d.date, endKey: d.date,
+                    days: 1, confirmed: d.confirmed !== false
+                };
+                runs.push(cur);
+            }
+        });
+    return runs;
+}
+
+/** 今天（北京时间）的日期键 */
+function todayKey() {
+    return cnDayKey(new Date());
 }

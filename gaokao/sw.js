@@ -9,7 +9,9 @@
    ============================================================ */
 
 const CACHE_PREFIX = 'gaokao-cache-';
-const ASSETS = ['./', './index.html', './style.css', './time.js', './gaokao.js', './manifest.json'];
+const ASSETS = ['./', './index.html', './style.css', './time.js', './lunar.js',
+                './gaokao.js', './manifest.json', './data/holidays.json',
+                './data/solar-terms.json'];
 
 /** 取当前 SW 的版本（sw.js 自身 URL 上的查询串，由 index.html 注册时带上） */
 function currentVersion() {

@@ -284,7 +284,8 @@ test('localStorage 中损坏的 JSON 不会让逻辑崩溃', () => {
     // 通过预置 storage 走 loadPhaseSettings 的真实解析路径
     const sandboxStorage = { gaokao_phase_settings: '{{{not json' };
     const api = load({ now: '2026-09-01T00:00:00+08:00', storage: sandboxStorage });
-    assert.equal(api.cnDayKey(api.getPhaseDates('first').start), '2026-12-22');
+    // 一诊默认日期：2026-12-21 起（原为 12-22，依实际安排更正）
+    assert.equal(api.cnDayKey(api.getPhaseDates('first').start), '2026-12-21');
 });
 
 test('localStorage 中合法 JSON 覆盖会被载入', () => {
