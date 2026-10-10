@@ -1,276 +1,235 @@
 # 四川高考倒计时 · 3+1+2
 
-一个纯静态、零依赖、零构建的新高考倒计时与阶段日程页面。
+一个**纯静态、零依赖、零构建**的新高考倒计时与考试日程页面。
+浏览器直接打开就能跑，没有任何依赖要安装。
 
-- 线上地址：<https://www.nightvoyager.online/gaokao/>
-- 归属站点：NightVoyager 的个人 GitHub Pages（应用本身全部位于本目录）
+**线上地址：<https://www.nightvoyager.online/gaokao/>**
 
-## 功能
+---
 
-- **分层倒计时**：高考总倒计时 → 当前/下一场考试进程条 → 各科逐场倒计时
-- **五阶段预报**：零诊 / 一诊 / 二诊 / 三诊 / 高考，可切换查看，状态徽章随时间自动翻转
-- **选科标记**：首选（历史/物理，互斥单选）+ 再选（化学/地理/思想政治/生物学，限 2 科），
-  自动高亮或淡化相关科目卡片
-- **全屏模式**：考试进度条、下一场提醒、已完成/剩余场次统计
-- **浮动小窗**：基于 Document Picture-in-Picture API（仅 Chromium 系支持）
-- **自定义日程**：可修改各阶段起止日期，保存至 localStorage
-- **节假日日历**：右栏常驻月历（放假 / 调休 / 预估三态着色）+ 左栏「下一个假期」卡；
-  「假期」按钮打开未来几个假期的时间线速览
-- **五套主题 × 三档字号**：砚台 / 夜航 / 白板 / 青瓷 / 露营，明暗自适应
-- 骨架屏、PWA 安装支持
+## 这是什么
 
-## 文件构成
+给四川新高考考生用的一个小页面，把三件事放在同一屏里：
 
-| 文件 | 作用 |
-|---|---|
-| `index.html` | 页面结构与无障碍语义（样式与逻辑均已外置） |
-| `style.css` | 全部样式、主题 token 与响应式布局 |
-| `time.js` | 时间基准、考试与阶段配置、节假日数据、纯函数 —— **不碰 DOM** |
-| `lunar.js` | 农历与二十四节气（朔表 + 节气兜底表），纯函数 —— **不碰 DOM** |
-| `gaokao.js` | DOM 渲染、事件绑定、每秒更新循环 |
-| `data/holidays.json` | 节假日数据（**权威来源**：2026 依国办发明电〔2025〕7 号，2027 为预估）。会整体替换 `time.js` 的内置兜底表 |
-| `data/solar-terms.json` | 二十四节气（2026/2027 全年 + 2028 年 1 月官方值）。会整体替换 `lunar.js` 的内置兜底表 |
-| `manifest.json` | PWA 清单（图标为内联 data-URI SVG） |
-| `sw.js` | Service Worker（缓存版本化 + 网络优先） |
-| `preview.html` | **设计基准 demo**，带 `noindex` 不参与收录；改动视觉时用它做对照 |
-| `MIGRATION-2.3.0.md` | 设计迁移计划书 + 验收标准 + 历轮补丁记录；**改视觉前先读** |
-| `CHANGELOG.md` | 版本变更记录 |
+1. **离高考还有多久** —— 总倒计时，以及 9 场考试各自的倒计时
+2. **现在处于哪个阶段** —— 零诊 / 一诊 / 二诊 / 三诊 / 高考 五阶段预报
+3. **接下来怎么放假** —— 节假日日历，带农历与二十四节气
 
-引入顺序有依赖：`time.js` → `lunar.js` → `gaokao.js`，三者不可颠倒。
+它是个人项目，也是长期维护的：项目作者自述没怎么写过前端，
+所以这里刻意把「数据只有一处来源」「改错了能被测试抓到」当成硬要求 ——
+否则这类页面过一年就没人敢动了。
 
-## 布局结构
+技术上没有框架、没有构建步骤、没有 `node_modules`：
+打开 `index.html` 就是完整应用。全部代码在 `gaokao/` 这一个目录里。
 
-页头与阶段轨道是**全宽**元素，两栏只承载内容：
+**想改代码** → [`docs/`](docs/README.md)（文档索引与阅读路径）
+**AI 协作者** → [`AGENTS.md`](AGENTS.md)
 
-```
-.main-content  (grid)
-├── .header            全宽：标题 + 届别
-├── .rail              全宽：考试阶段轨道（菱形节点 + 连接线 + 回到当前阶段）
-├── #pgColLeft         左栏：总倒计时（含阶段名/徽章）+ 下一个假期   ← 桌面端 sticky
-├── #pgColRight        右栏：当前考试 / 选科 / 日历 / 日程
-└── .footer            全宽（与左栏同一行区间，靠 z-index 压在其上）
-```
+---
 
-> **倒计时只有一处**。阶段专有信息（全名、状态徽章）写在 Hero 内部，
-> 不要为某个阶段另起一张带倒计时的卡片 —— 那会让页面上并排出现两个相同的倒计时
-> （v2.3.2 修掉的正是这个）。
+## 功能特性
 
-## 数据放在哪：兜底 + JSON 覆盖
+### 倒计时
 
-这份页面的数据分散在几个文件里，不是随手放的，判据是**「多久会过期」**：
+分三层，一眼看清「还有多久」：
 
-| 数据 | 位置 | 过期方式 |
-| --- | --- | --- |
-| 考试与阶段配置 | `time.js` 的 `exams` / `PHASE_CONFIG` | 一年一次（年份自动滚动） |
-| 节假日放假与调休 | `time.js` 的 `HOLIDAY_FALLBACK` **＋** `data/holidays.json` | 一年一次，**由国务院公告决定** |
-| 二十四节气 | `lunar.js` 的 `SOLAR_TERMS_FALLBACK` **＋** `data/solar-terms.json` | 一年一次（官方节气表），另有近似式兜底未来年份 |
-| 农历换算 | `lunar.js` 的朔表 `NEW_MOON_DAYS` | **天文规律，不会过期** |
+- **总倒计时** —— 大字显示距高考的天数，下面跟精确到秒的时分秒
+- **当前/下一场考试** —— 场次名称、时段、剩余时间、进度条
+- **逐场倒计时** —— 9 场科目各自还有多久
 
-**两组「兜底 + JSON 覆盖」是同一套策略**：内置表保证任何时刻都能渲染，
-`fetch` 成功则替换，**失败或数据非法都静默保留兜底**。网络只负责「可能更新一点」。
+倒计时**全站只有一处**，不会出现两处在数同一件事。
 
-**为什么两组都要有内置兜底**：节假日与节气都是**每个日历格都要用**的数据，
-不能承受异步失败。JSON 存在的意义是给「一年一变的官方公告 / 官方表」留一个更新入口。
+### 五阶段预报
 
-**改数据的正确姿势**：
+零诊 / 一诊 / 二诊 / 三诊 / 高考，一条轨道上的五个菱形节点：
 
-| 要改什么 | 改哪几处 | 改完跑 |
-| --- | --- | --- |
-| 放假 / 调休 | `time.js` 的 `HOLIDAY_FALLBACK` **和** `data/holidays.json` | `holiday_check.py` |
-| 节气（权威年份） | `lunar.js` 的 `SOLAR_TERMS_FALLBACK` **和** `data/solar-terms.json` | `solar_check.py` |
-| 未来年份的节气近似值 | 只改 `lunar.js` 的 `SOLAR_TERM_APPROX` | 无需比对（单副本） |
+- 状态**随时间自动翻转**（已结束 / 进行中 / 当前 / 未来）
+- 点任一节点即可查看该阶段，「回到当前阶段」一键返回
+- 查看已结束阶段时轨道换色提示
 
-两个检查脚本都会把两份数据逐条 diff 出来。**节假日已经因为两边不同步返工过三次**，
-所以这一步不是可选的。
+### 考试日程与选科
 
-> `SOLAR_TERM_APPROX` 是**近似表**，只给日期不给时刻 ——
-> 官方未公布的年份不显示未经核对的分钟数。同一年不要同时出现在
-> `SOLAR_TERMS_FALLBACK` 和 `SOLAR_TERM_APPROX` 里（前者优先，但重复就是隐患）。
+- 9 场考试按 6/7–6/10 四天分「上午场 / 下午场」列出
+- 选科标记：首选（历史 / 物理，互斥）+ 再选（化学 / 地理 / 思想政治 / 生物学，限 2 科）
+- 选完后自动**高亮**已选科目、**淡化**未选科目
 
-> **曾经的坑**：`.main-content` 用了 `grid-template-areas`，而 `.header` 没有分到区域。
-> CSS Grid 的自动放置会把它塞进**最后的隐式行**，于是页头标题跑到了整页最下方
-> （实测标题 `y=1547`、页脚 `y=1487`）。
-> **新增任何 `.main-content` 的直接子元素，都必须显式指定 `grid-area`，
-> 否则它会被自动放到最后一行的下面。**
->
-> 另一个坑：网格必须加在**两栏的直接父元素**上。早先写在 `.container` 上，
-> 而两栏被 `.main-content` 包着，网格只作用于那唯一一个子元素，双栏会静默退化成单列。
+### 节假日日历
 
-## 关键实现约定
+- 右栏常驻月历，放假 / 调休 / 预估**三态着色**
+- 左栏「下一个假期」卡，显示假期名、日期区间、剩余天数和进度
+- 「假期」按钮打开未来几个假期的时间线速览
+- 每格还带**农历**与**二十四节气**（如「霜降 + 十四」）
+- 2026 年数据依国务院办公厅正式通知，未公布的年份标「预估」
 
-修改代码前请先了解以下几条，它们是这个项目最容易踩坑的地方。
+### 外观
 
-### 1. 时间一律以北京时间（UTC+8）为基准
+- **五套主题**：砚台 / 夜航 / 白板 / 青瓷 / 露营
+- **三档字号** + **明暗自适应**（跟随系统）
+- 主题菜单独立，与设置分开
 
-所有日期用 `time.js` 的 `bjDate(year, month, day, h, m)` 构造，**不要**直接写
-`new Date(...)` —— 后者按浏览器本地时区解释，会让非 UTC+8 的用户看到偏移 8 小时的倒计时。
-日期文案用 `fmtCnFull` / `fmtCnMonthDay`（内部已固定 `Asia/Shanghai`）。
+### 其他
 
-```js
-bjDate(2027, 6, 7, 9, 0).toISOString();   // '2027-06-07T01:00:00.000Z' ← 北京 09:00
-```
+- **全屏模式**：大号倒计时 + 进度条，考试时适合放在旁边
+- **浮动小窗**：画中画显示，可以盖在其他窗口上面（仅 Chromium）
+- **自定义日程**：可改各阶段起止日期，改了之后 9 场考试时间会跟着整体平移
+- 骨架屏、PWA 安装、键盘操作、读屏适配、`prefers-reduced-motion`
 
-> **注意「日序号」有两套口径**：
-> `cnDayNumber()`（`time.js`）返回**距 1970-01-01** 的天数；
-> `lunarEpochDay()`（`lunar.js`）返回**距 2000-01-01** 的天数。
-> 两者相差 `LUNAR_EPOCH_DAY = 10957`。混用会让农历查表全部落空且**不报错**，
-> 只是静默显示不出农历 —— 踩过一次。
+---
 
-### 2. 高考日期只有一处来源
+## 快速开始
 
-`time.js` 的 `exams` 数组只配「日 + 时 + 分」，年份由 `GAOKAO_YEAR` 补齐；
-`PHASE_CONFIG.final` 的默认日期由同一年推导。每年 **6/10 11:00** 之后
-`GAOKAO_YEAR` 自动推进到下一年，**不需要手工改年份**。
+### 环境要求
 
-> 曾经的坑：`PHASE_CONFIG.final` 硬编码 2027，而总倒计时的年份是动态的，
-> 导致 2027-06-10 之后出现「页头 2028 届 / 总倒计时说距 2028 年高考还有 /
-> 阶段导航却说高考已结束」的自相矛盾。改动此处请务必跑回归测试。
-
-### 3. 用户在设置里改高考日期时，9 场科目时间跟随起始日整体平移
-
-由 `computeExamDates()` 按**北京时间日历天**平移实现，保证总倒计时、科目卡片、
-全屏、小窗四处永远一致。因此改完设置必须调用 `refreshPhaseUI()` 重算 `examDates`。
-
-### 4. 版本号只有一处来源
-
-`time.js` 的 `APP_VERSION`。页脚由它填充；`gaokao.js` 注册 Service Worker 时
-把它作为查询串传给 `sw.js`，`sw.js` 用它作为缓存名的一部分。
-
-**改了代码记得提升 `APP_VERSION`**，否则浏览器不会更新 Service Worker，
-用户可能继续执行旧缓存中的脚本。
-
-### 5. localStorage 中的用户数据必须容错
-
-键名：`gaokao_phase_settings`、`gaokao_subjects`、`gaokao_theme`。
-损坏的 JSON 或字段不合法时必须回退默认值并 `console.warn`，不能白屏
-（见 `isSaneOverride`）。
-
-> 曾经的坑：覆盖数据的字段名是 `startYear/startMonth/startDay`，而默认值是
-> `{year, month, day}`，两者不同名。`getPhaseDates()` 读错字段会**静默回退**默认值，
-> 表现为「设置改了没用」。
-
-### 6. 骨架屏的移除不能只依赖 `transitionend`
-
-骨架屏是 `position:absolute; inset:0; z-index:100` 的全屏遮罩，
-若移除失败会直接盖住整页、表现为白屏。
-
-`transitionend` **不保证触发**：标签页在后台、元素未参与绘制、首帧内同时写入
-`transition` 与 `opacity` 被浏览器视为终态、或过渡被打断时都不会派发。
-因此 `hideSkeleton()` 采用三重保障：
-
-1. `transitionend`（正常路径）
-2. 700ms 兜底定时器（`transitionend` 未触发时）
-3. 淡出结束后强制 `display: none`，确保即便 `opacity` 从未变化也退出视觉层
-
-用 `requestAnimationFrame` 套两层，先让首帧完成样式计算，再触发淡出。
-
-### 依赖设备本地时间
-
-这是纯静态页面，没有服务端校时。倒计时依据访客设备的系统时钟计算，
-用户手动修改系统时间即可改变显示结果 —— 这是静态托管的固有限制，非缺陷。
-
-## 开发与测试
-
-无依赖，无需 `npm install`。
-
-### 1. 冻结回归（随仓库提交）
-
-```bash
-# 语法检查
-node --check time.js
-node --check lunar.js
-node --check gaokao.js
-node --check sw.js
-
-# 冻结回归（24 项：时间基准、跨年滚动、阶段顺序、覆盖校验、选科相关性）
-node tests/gaokao-time.test.mjs
-```
-
-测试位于仓库根目录的 `tests/`，**改动 `time.js` 或阶段配置后必须跑**。
-也可以 `node --test tests/`；若该命令在受限环境下报 `spawn EPERM`
-（子进程管道被沙箱拦截），改用上面直接运行测试文件的方式，效果相同。
-
-### 2. 数据一致性检查（脚本在本地，不入库）
-
-节假日与节气各有一份「内置兜底表 + `data/*.json`」的双副本，
-**只改一边会造成静默失效**（节假日已经因此返工过三次）。改完跑对应脚本逐条 diff：
-
-```bash
-python .analysis/holiday_check.py   # time.js 的 HOLIDAY_FALLBACK  vs data/holidays.json
-python .analysis/solar_check.py     # lunar.js 的 SOLAR_TERMS_FALLBACK vs data/solar-terms.json
-```
-
-两个脚本都只读文件、打印比对结果，输出末尾的 `两份数据完全一致 = True` 是唯一的通过标志。
-
-### 3. 页面行为验证（脚本在本地，不入库）
-
-`.analysis/` 下有一组 Playwright 探针（该目录已在 `.gitignore` 中）。
-它们需要先起本地服务器，并且**必须在能启动 Chromium 的权限下运行**：
-
-| 脚本 | 检查内容 |
+| 用途 | 需要什么 |
 | --- | --- |
-| `ids_probe.py` | 68 个静态 id 是否齐全；已移除的 id 是否确实不存在 |
-| `prod_probe.py` | 5 主题 × 4 视口的溢出矩阵、主题菜单、旧键迁移、既有功能 |
-| `scroll_probe.py` | 左栏吸附行程、计时跳动、选科淡化 |
-| `parity_probe.py` | 与 `preview.html` 逐项比对设计量（列宽比、色值、圆角、间距） |
-| `lunarjs_probe.py` | 农历换算与 24 条参照逐条比对 |
-| `verify_probe.py` | 多视口下的吸附与「回到当前阶段」 |
-| `round3_probe.py` | 月份连续性、rail-back、Hero 文案 |
-| `b345_probe.py` | Hero/假期卡/日历的渲染与溢出 |
-| `cal_probe.py` | 日期选择器「浏览月份不应产生虚假选中」 |
+| **只是看页面** | 任意现代浏览器 |
+| 本地预览（含 Service Worker / 离线） | Python 3 或任意静态服务器 |
+| 跑测试 | Node.js |
 
-探针把结果写入 `.analysis/*.json` 而不是 stdout —— 沙箱下管道会被拦截，
-写文件是唯一可靠的方式。**读断言前先确认报告文件的 mtime 晚于脚本**，
-否则你读到的可能是上一轮的旧结果（踩过这个坑，并因此误报过两次「通过」）。
+**不需要** `npm install` —— 这个项目没有 `package.json`。
 
-### 4. 本地预览
+### 本地运行
 
 ```bash
-cd ..                      # 到仓库根目录
+# 在仓库根目录
 python -m http.server 8080
-# 打开 http://localhost:8080/gaokao/
 ```
 
-**不要用 `file://` 双击打开**来验证完整功能：该协议属非安全上下文，
-Service Worker、离线缓存、`manifest.json` 安装提示在此环境下**必然不可用**。
-代码已针对 `file://` 做了协议守卫（跳过注册并给出 `console.info`），
-页面核心倒计时功能仍可正常显示，但请以 HTTP 环境为准做验收。
+然后打开：
 
-> `python -m http.server` 会把 `.js` 当 `text/plain` 发送，因此本地预览时
-> 控制台会出现一条 `unsupported MIME type ('text/plain')` —— 那只是
-> Service Worker 注册被拒，与页面代码无关。GitHub Pages 会正确发送
-> `application/javascript`，线上不会有这条报错。
+- <http://localhost:8080/gaokao/> —— 实际页面
+- <http://localhost:8080/gaokao/preview.html> —— 设计基准 demo（改动视觉时对照用）
 
-### 设计对照
+> **不要用 `file://` 双击打开**来验收完整功能。
+> 该协议属非安全上下文，Service Worker、离线缓存、PWA 安装在此环境下必然不可用。
+> 页面核心功能仍能显示（代码有协议守卫），但请以 HTTP 环境为准。
 
-`preview.html` 是设计基准 demo，自带主题 / 视口 / 字号切换工具条。
-改动视觉时请与它对照，不要只断言「没有溢出」就当通过 ——
-**属性通过不代表设计迁移到位**，这一点在第 2.2.0 版踩过。
+### 跑测试
 
 ```bash
-# 打开设计基准，逐项比对配色与布局
-http://localhost:8080/gaokao/preview.html
+node tests/gaokao-time.test.mjs      # 冻结回归，24 项
 ```
 
-## 部署
+---
 
-推送到 `main` 分支即可，GitHub Pages 直接发布（仓库根的 `.nojekyll` 已关闭 Jekyll 处理）。
-发布后如需验证缓存更新：DevTools → Application → Cache Storage，
-应只存在一个 `gaokao-cache-v<APP_VERSION>`。
+## 目录结构
+
+```
+gaokao/
+├── index.html          页面结构
+├── style.css           样式、主题 token、响应式布局
+├── time.js             时间基准、考试与阶段配置（纯逻辑，不碰 DOM）
+├── lunar.js            农历与二十四节气（纯逻辑，不碰 DOM）
+├── gaokao.js           渲染、交互、每秒更新
+├── sw.js               Service Worker（离线缓存）
+├── manifest.json       PWA 清单
+├── data/
+│   ├── holidays.json       节假日数据
+│   └── solar-terms.json    二十四节气数据
+├── preview.html        设计基准 demo（不参与运行时）
+├── docs/               项目文档 ← 想深入了解从这里开始
+├── README.md           你在读的这个文件
+├── AGENTS.md           给 AI / 维护者的路由器
+└── CHANGELOG.md        版本变更记录
+```
+
+三个 JS 文件的**加载顺序有依赖**：`time.js` → `lunar.js` → `gaokao.js`，不可颠倒。
+
+---
+
+## 文档索引
+
+**`README.md`（本文）给人看，[`AGENTS.md`](AGENTS.md) 给 AI / 维护者看。**
+深入的实现细节都在 [`docs/`](docs/README.md) 里。
+
+| 我想知道…… | 读这个 |
+| --- | --- |
+| 有哪些功能、怎么跑起来 | 本文 |
+| 项目定位、设计目标与取舍、已知限制 | [docs/overview.md](docs/overview.md) |
+| 代码怎么分层、**为什么这样设计** | [docs/architecture.md](docs/architecture.md) |
+| 某个函数/模块怎么实现的 | [docs/implementation.md](docs/implementation.md) |
+| 某个功能具体怎么工作 | [docs/modules.md](docs/modules.md) |
+| **界面设计规范**（配色、圆角、组件） | [docs/DESIGN.md](docs/DESIGN.md) |
+| 数据文件格式、**每年怎么更新数据** | [docs/data.md](docs/data.md) |
+| 怎么测试、验收标准 | [docs/testing.md](docs/testing.md) |
+| **改视觉后怎么验收** | [docs/VISUAL-CHECK.md](docs/VISUAL-CHECK.md) |
+| 怎么发布、缓存怎么工作 | [docs/deployment.md](docs/deployment.md) |
+| 开发规范、改样式要注意什么 | [docs/development.md](docs/development.md) |
+| **改了代码要同步改哪些文档** | [docs/MAINTENANCE.md](docs/MAINTENANCE.md) |
+| 完整文档索引 | [docs/README.md](docs/README.md) |
+| 版本演进历史 | [CHANGELOG.md](CHANGELOG.md) |
+
+---
+
+## 常见问题
+
+### 控制台有一条 `unsupported MIME type ('text/plain')`
+
+**本地预览时的正常现象，不是代码问题。**
+`python -m http.server` 把 `.js` 当 `text/plain` 发送，导致 Service Worker 注册被拒。
+GitHub Pages 会正确发送 `application/javascript`，线上不会有这条报错。
+
+### 改了代码但浏览器还是旧的
+
+Service Worker 缓存。`APP_VERSION` 是缓存名的一部分，
+**改了代码要同时提升 `time.js` 里的 `APP_VERSION`**，否则用户可能继续执行旧缓存。
+
+验证方式：DevTools → Application → Cache Storage，
+应该只存在一个 `gaokao-cache-v<版本号>`。
+
+### 倒计时不准 / 和手机系统时间不一致
+
+页面依赖**设备本地时钟**，这是纯静态托管的固有限制。
+本项目刻意不做服务端校时（会引入运行时依赖，而收益只覆盖「设备时间本身错误」这一少数场景）。
+
+### 节假日数据是错的 / 明年怎么办
+
+2026 年数据依国务院办公厅正式通知（国办发明电〔2025〕7 号）。
+**官方尚未公布的年份会标「预估」**。每年 11 月前后公告发布后，
+按 [docs/data.md](docs/data.md#四年度更新流程) 更新即可 ——
+注意**两处都要改**（`time.js` 兜底表 + `data/holidays.json`），改完跑校验脚本。
+
+### 节气为什么不显示具体时刻
+
+三行小字里塞不下 `04:02`；而且官方未公布的年份没有权威时刻，
+显示会造成「有的有、有的没有」的不一致。
+**时刻仍然保留在无障碍标签里**供读屏使用。
+
+### 浮动小窗按钮没反应
+
+Document Picture-in-Picture 目前只有 Chromium 116+ 支持。
+其他浏览器下按钮会隐藏或不可用。
+
+### 全屏在 iOS 上能用吗
+
+能用。优先调用 Fullscreen API，**不可用时退化为页面内的全屏覆盖层**，
+所以 iOS Safari 也能正常全屏（不依赖它残缺的非视频元素全屏支持）。
+
+### 手机上左边那栏空白很多
+
+左栏只有总倒计时和下一个假期卡，长页面上下留白明显。
+这是设计基准 `preview.html` 本身的比例，不是布局 bug。
+
+---
 
 ## 浏览器支持
 
 | 功能 | 支持情况 |
-|---|---|
-| 倒计时、阶段、选科、主题、日历 | 所有现代浏览器 |
-| Hero 大数字的容器查询字号 `cqw` | 支持容器查询的浏览器；不支持时回退到 `--n-fallback`（vw 系数） |
-| 全屏模式 | 依赖 Fullscreen API；iOS Safari 对非视频元素支持残缺 |
+| --- | --- |
+| 倒计时、阶段、选科、主题、日历、农历节气 | 所有现代浏览器 |
+| Hero 大数字的自动字号 | 容器查询 `cqw`；不支持时回退到保守的 `vw` 系数 |
+| 全屏模式 | 优先 Fullscreen API，不可用时退化为页面内覆盖层（iOS 可用） |
 | 浮动小窗 | 仅 Chromium 116+ 的 Document Picture-in-Picture |
-| Service Worker / 离线 / 安装 | 需 http/https |
+| Service Worker / 离线 / PWA 安装 | 需 http/https |
 | 键盘操作、`prefers-reduced-motion` | 已适配 |
 
-## 历史
+---
 
-见 [CHANGELOG.md](./CHANGELOG.md)。当前版本 **v2.5.2**。
+## 版权与致谢
 
-初版使用 **AI Generated Content** 完成，项目作者自述「没怎么写过前端，就直接用 AI 了说是」。
+个人项目，初版由 **AI Generated Content** 完成 ——
+项目作者自述「没怎么写过前端，就直接用 AI 了说是」。
+
+「露营」主题的视觉语言参考了《摇曳露营△》（ゆるキャン△）的配色与形状风格。
+
+当前版本 **v2.5.2**，完整历史见 [CHANGELOG.md](CHANGELOG.md)。

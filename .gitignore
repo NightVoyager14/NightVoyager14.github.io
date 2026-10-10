@@ -1,6 +1,9 @@
 # 本地分析/验证脚本（不参与发布）
 .analysis/
 
+# 本机开发指南：只有本机成立的路径、环境与沙箱坑（不入库）
+gaokao/LOCAL-DEV.md
+
 # 编辑器与系统
 .vscode/
 .idea/
